@@ -29,6 +29,7 @@ interface SidebarProps {
   setDrawnPolygon?: (val: {lat: number, lng: number}[]) => void;
   selectedSubZoneId?: string | null;
   onSelectSubZone?: (id: string | null) => void;
+  displayFacilities?: MockData['facilities'];
 }
 
 export default function Sidebar({
@@ -48,10 +49,11 @@ export default function Sidebar({
   drawnPolygon,
   setDrawnPolygon,
   selectedSubZoneId,
-  onSelectSubZone
+  onSelectSubZone,
+  displayFacilities = zoneFacilities
 }: SidebarProps) {
   
-  const { role } = useAuth();
+  const { role, assignedZoneId } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedZoneId, setExpandedZoneId] = useState<string | null>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
@@ -117,18 +119,19 @@ export default function Sidebar({
                   f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, drawnPolygon)
                 );
                 
-                let scoreSum = 0;
-                let scoreCount = 0;
+                let totalFacilityScore = 0;
+                let validFacilityCount = 0;
                 
                 facilitiesInPolygon.forEach(f => {
                   const fScores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
-                  fScores.forEach(cs => {
-                    scoreSum += cs.score as number;
-                    scoreCount++;
-                  });
+                  if (fScores.length > 0) {
+                    const fAvg = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
+                    totalFacilityScore += fAvg;
+                    validFacilityCount++;
+                  }
                 });
                 
-                const avgScore = scoreCount > 0 ? (scoreSum / scoreCount) : null;
+                const avgScore = validFacilityCount > 0 ? (totalFacilityScore / validFacilityCount) : null;
 
                 const newSub = {
                   id: 'sub_' + Date.now(),
@@ -327,9 +330,9 @@ export default function Sidebar({
                             </div>
                           )}
                           
-                          {(role === 'admin' || role === 'official') && (
+                          {(role === 'admin' || (role === 'official' && assignedZoneId === z.id)) && (
                             <button 
-                              onClick={() => handleStartEdit(z)}
+                              onClick={() => {handleStartEdit(z)}}
                               className="w-full flex items-center justify-center text-xs text-zinc-600 font-semibold p-2 mt-1 hover:bg-zinc-100 rounded-lg transition-colors border border-zinc-200 bg-white"
                             >
                               ⚙️ 하위 구역 관리
@@ -387,21 +390,6 @@ export default function Sidebar({
   // Zone Selected View (F2 & F4 concepts)
   // @ts-ignore
   const selectedSubZone = selectedZone.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
-  
-  let displayFacilities = zoneFacilities;
-  if (selectedSubZoneId === 'unassigned') {
-    // @ts-ignore
-    const allSubZonePolygons = (selectedZone.subZones || []).map(s => s.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })));
-    displayFacilities = zoneFacilities.filter(f => {
-      if (!f.location) return false;
-      const pt = { lat: f.location.lat, lng: f.location.lng };
-      return !allSubZonePolygons.some((poly: any) => isPointInPolygon(pt, poly));
-    });
-  } else if (selectedSubZone) {
-    // @ts-ignore
-    const poly = selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }));
-    displayFacilities = zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, poly));
-  }
 
   const zoneScores = data.categoryScores.filter(cs => displayFacilities.some(f => f.id === cs.facility_id));
   const avgScores: Record<string, { total: number, count: number }> = {
@@ -445,25 +433,45 @@ export default function Sidebar({
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="p-6 border-b border-zinc-200 bg-white sticky top-0 z-10 shadow-sm">
-        <button 
-          onClick={() => {
-            if (selectedCategory) setSelectedCategory(null);
-            else onBackToZones();
-          }}
-          className="flex items-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors mb-4"
-        >
-          <ArrowLeft size={16} className="mr-1" />
-          {selectedCategory ? '전체 카테고리로 돌아가기' : '지도 초기화'}
-        </button>
-        <div className="flex items-end justify-between">
+        <div className="flex justify-between items-center mb-4 print:hidden">
+          <button 
+            onClick={() => {
+              if (selectedCategory) setSelectedCategory(null);
+              else onBackToZones();
+            }}
+            className="flex items-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+          >
+            <ArrowLeft size={16} className="mr-1" />
+            {selectedCategory ? '전체 카테고리로 돌아가기' : '지도 초기화'}
+          </button>
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center px-3 py-1.5 bg-zinc-800 hover:bg-zinc-900 text-white text-xs font-semibold rounded-lg transition-colors"
+          >
+            <Printer size={14} className="mr-1.5" />
+            PDF 보고서 인쇄
+          </button>
+        </div>
+        
+        {/* Print-only Report Title */}
+        <div className="hidden print:block mb-6 text-center border-b-2 border-zinc-800 pb-4">
+          <h1 className="text-3xl font-black text-zinc-900">
+            {selectedSubZone ? `${selectedSubZone.name} 진단 보고서` : `${selectedZone.name} 총괄 진단 보고서`}
+          </h1>
+          <p className="text-zinc-500 mt-2">모두의 내일 접근성 진단 시스템</p>
+        </div>
+
+        <div className="flex items-end justify-between print:hidden">
           <div>
             <span className="text-xs font-semibold tracking-wider text-blue-600 uppercase mb-1 block">Zone Details</span>
-            <h2 className="text-2xl font-bold text-zinc-900">{selectedZone.name}</h2>
+            <h2 className="text-2xl font-bold text-zinc-900">{selectedSubZone ? selectedSubZone.name : selectedZone.name}</h2>
           </div>
           <div className="text-right">
-            <div className="text-xs text-zinc-500 mb-1">최종 넓이지수</div>
-            <div className="text-2xl font-bold" style={{ color: getColorForScore(selectedZone.final_index as number | null) }}>
-              {selectedZone.final_index !== null ? (selectedZone.final_index as number).toFixed(1) : '-'}
+            <div className="text-xs text-zinc-500 mb-1">{selectedSubZone ? '구역 넓이지수' : '최종 넓이지수'}</div>
+            <div className="text-2xl font-bold" style={{ color: getColorForScore(selectedSubZone ? (selectedSubZone.final_index as number | null) : (selectedZone.final_index as number | null)) }}>
+              {selectedSubZone 
+                ? (selectedSubZone.final_index !== null ? Number(selectedSubZone.final_index).toFixed(1) : '-')
+                : (selectedZone.final_index !== null ? (selectedZone.final_index as number).toFixed(1) : '-')}
             </div>
           </div>
         </div>
@@ -474,7 +482,7 @@ export default function Sidebar({
         <section>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-zinc-900">세분화 하위 구역</h3>
-            {(role === 'admin' || role === 'official') && (
+            {(role === 'admin' || (role === 'official' && assignedZoneId === selectedZone.id)) && (
               <button 
                 onClick={() => {
                   onBackToZones();
@@ -583,7 +591,7 @@ export default function Sidebar({
                 <h3 className="text-lg font-bold text-zinc-900">{rankingTitle}</h3>
                 <span className="text-sm text-zinc-500">조사된 시설 {ranking.length}곳</span>
               </div>
-              <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2">
+              <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2 print:max-h-none print:overflow-visible">
                 {ranking.map((f, i) => {
                   const isBottom = i >= ranking.length - Math.min(3, ranking.length) || f.avgScore < 50; 
                   return (

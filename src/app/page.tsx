@@ -5,6 +5,7 @@ import KakaoMap from '@/components/KakaoMap';
 import Sidebar from '@/components/Sidebar';
 import mockDataRaw from '@/data/mock.json';
 import { useAuth } from '@/contexts/AuthContext';
+import { isPointInPolygon } from '@/utils/geo';
 
 export type MockData = typeof mockDataRaw;
 
@@ -16,20 +17,42 @@ export default function Home() {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [drawingTargetZoneId, setDrawingTargetZoneId] = useState<string | null>(null);
   const [drawnPolygon, setDrawnPolygon] = useState<{lat: number, lng: number}[]>([]);
+  const [reselectingSubZoneId, setReselectingSubZoneId] = useState<string | null>(null);
   
   const { role, assignedZoneId } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Load zones from localStorage if available
+    let initialZones = mockDataRaw.zones;
     const savedZones = localStorage.getItem('naeil_zonesData');
     if (savedZones) {
       try {
-        setZonesData(JSON.parse(savedZones));
+        initialZones = JSON.parse(savedZones);
       } catch (e) {
         console.error('Failed to parse zonesData from localStorage', e);
       }
     }
+
+    // Recalculate main zone scores dynamically based on facility data
+    const recalculatedZones = initialZones.map(zone => {
+      const zoneFacilities = mockDataRaw.facilities.filter(f => f.zone_id === zone.id);
+      let totalFacilityScore = 0;
+      let validFacilityCount = 0;
+
+      zoneFacilities.forEach(f => {
+        const fScores = mockDataRaw.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+        if (fScores.length > 0) {
+          const fAvg = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
+          totalFacilityScore += fAvg;
+          validFacilityCount++;
+        }
+      });
+
+      const avgScore = validFacilityCount > 0 ? (totalFacilityScore / validFacilityCount) : null;
+      return { ...zone, final_index: avgScore as any };
+    });
+
+    setZonesData(recalculatedZones);
     setMounted(true);
   }, []);
 
@@ -66,6 +89,25 @@ export default function Home() {
 
   const selectedFacility = mockData.facilities.find(f => f.id === selectedFacilityId) || null;
 
+  // Calculate displayFacilities (lifting up from Sidebar)
+  // @ts-ignore
+  const selectedSubZone = selectedZone?.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
+  
+  let displayFacilities = zoneFacilities;
+  if (selectedSubZoneId === 'unassigned') {
+    // @ts-ignore
+    const allSubZonePolygons = (selectedZone?.subZones || []).map(s => s.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })));
+    displayFacilities = zoneFacilities.filter(f => {
+      if (!f.location) return false;
+      const pt = { lat: f.location.lat, lng: f.location.lng };
+      return !allSubZonePolygons.some((poly: any) => isPointInPolygon(pt, poly));
+    });
+  } else if (selectedSubZone) {
+    // @ts-ignore
+    const poly = selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }));
+    displayFacilities = zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, poly));
+  }
+
   return (
     <main className="flex h-screen w-full overflow-hidden bg-zinc-50 print:block print:h-auto print:overflow-visible">
       <div className="flex-1 relative h-full print:hidden">
@@ -88,6 +130,8 @@ export default function Home() {
           drawnPolygon={drawnPolygon}
           setDrawnPolygon={setDrawnPolygon}
           drawingTargetZoneId={drawingTargetZoneId}
+          reselectingSubZoneId={reselectingSubZoneId}
+          displayFacilities={displayFacilities}
         />
         {/* Top Header Overlay */}
         <div className="absolute top-4 left-4 z-10 pointer-events-none">

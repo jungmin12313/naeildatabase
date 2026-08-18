@@ -28,6 +28,8 @@ interface KakaoMapProps {
   drawingTargetZoneId?: string | null;
   selectedSubZoneId?: string | null;
   onSelectSubZone?: (id: string) => void;
+  reselectingSubZoneId?: string | null;
+  displayFacilities?: any[];
 }
 
 export default function KakaoMap({ 
@@ -39,7 +41,9 @@ export default function KakaoMap({
   setDrawnPolygon,
   drawingTargetZoneId,
   selectedSubZoneId,
-  onSelectSubZone
+  onSelectSubZone,
+  reselectingSubZoneId,
+  displayFacilities
 }: KakaoMapProps) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [kakaoError, setKakaoError] = useState(false);
@@ -175,7 +179,7 @@ export default function KakaoMap({
               strokeColor={isSelected ? (selectedSubZoneId === 'unassigned' ? '#4b5563' : '#3b82f6') : '#71717a'}
               strokeOpacity={0.8}
               strokeStyle={isSelected ? 'solid' : 'dashed'}
-              fillColor={isSelected ? (selectedSubZoneId === 'unassigned' ? '#9ca3af' : mainColor) : '#e4e4e7'}
+              fillColor={isSelected ? (selectedSubZoneId === 'unassigned' ? '#9ca3af' : mainColor) : mainColor}
               fillOpacity={isSelected ? (selectedSubZoneId === 'unassigned' ? 0.3 : 0.6) : 0.4}
               onClick={() => onSelectZone(zone.id)}
             />
@@ -210,29 +214,47 @@ export default function KakaoMap({
               const subCenterLng = subPath.reduce((sum: number, p: any) => sum + p.lng, 0) / subPath.length;
 
               const isSubSelected = selectedSubZoneId === sub.id;
+              const isReselecting = reselectingSubZoneId === sub.id;
 
               return (
                 <div key={sub.id}>
                   <Polygon
                     path={subPath}
-                    strokeWeight={isSubSelected ? 5 : 3}
-                    strokeColor={isSubSelected ? '#ef4444' : '#2563eb'}
-                    strokeOpacity={isSubSelected ? 1 : 0.8}
+                    strokeWeight={isSubSelected ? 5 : (isReselecting ? 4 : 3)}
+                    strokeColor={isSubSelected ? '#ef4444' : (isReselecting ? '#ef4444' : '#2563eb')}
+                    strokeOpacity={isSubSelected ? 1 : (isReselecting ? 0.8 : 0.8)}
                     fillColor={subColor}
-                    fillOpacity={isSubSelected ? 0.9 : 0.7}
-                    strokeStyle={isSubSelected ? 'solid' : 'dashed'}
+                    fillOpacity={isReselecting ? 0.1 : (isSubSelected ? 0.9 : 0.7)}
+                    strokeStyle={isSubSelected ? 'solid' : (isReselecting ? 'longdash' : 'dashed')}
                     onClick={() => onSelectSubZone && onSelectSubZone(sub.id)}
                   />
-                  <CustomOverlayMap position={{ lat: subCenterLat, lng: subCenterLng }}>
-                    <div 
-                      className={`px-2 py-1 backdrop-blur-sm rounded-md shadow border text-xs font-bold flex flex-col items-center cursor-pointer transition-transform ${isSubSelected ? 'bg-red-50 text-red-700 border-red-500 scale-110 z-10' : 'bg-white/90 text-zinc-800 border-zinc-200 hover:scale-105'}`}
-                      onClick={() => onSelectSubZone && onSelectSubZone(sub.id)}
-                    >
-                      <span>{sub.name}</span>
-                      <span style={{ color: isSubSelected ? '#ef4444' : subColor }}>{subScore !== null ? `${subScore.toFixed(1)}점` : '-'}</span>
-                    </div>
-                  </CustomOverlayMap>
+                  {!isReselecting && (
+                    <CustomOverlayMap position={{ lat: subCenterLat, lng: subCenterLng }}>
+                      <div 
+                        className={`px-2 py-1 backdrop-blur-sm rounded-md shadow border text-xs font-bold flex flex-col items-center cursor-pointer transition-transform ${isSubSelected ? 'bg-red-50 text-red-700 border-red-500 scale-110 z-10' : 'bg-white/90 text-zinc-800 border-zinc-200 hover:scale-105'}`}
+                        onClick={() => onSelectSubZone && onSelectSubZone(sub.id)}
+                      >
+                        <span>{sub.name}</span>
+                        <span style={{ color: isSubSelected ? '#ef4444' : subColor }}>{subScore !== null ? `${subScore.toFixed(1)}점` : '-'}</span>
+                      </div>
+                    </CustomOverlayMap>
+                  )}
                 </div>
+              );
+            })}
+
+            {/* Facility Markers (e.g. Unassigned) */}
+            {selectedSubZoneId === 'unassigned' && displayFacilities && displayFacilities.map(f => {
+              if (!f.location) return null;
+              return (
+                <CustomOverlayMap key={`marker-${f.id}`} position={f.location}>
+                  <div className="group relative cursor-pointer">
+                    <div className="w-4 h-4 bg-zinc-600 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block whitespace-nowrap bg-zinc-800 text-white text-xs px-2 py-1 rounded shadow-lg z-20">
+                      {f.name}
+                    </div>
+                  </div>
+                </CustomOverlayMap>
               );
             })}
           </div>
