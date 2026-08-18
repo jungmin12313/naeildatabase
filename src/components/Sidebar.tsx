@@ -563,6 +563,7 @@ export default function Sidebar({
           </div>
           <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 flex flex-col justify-center">
             <RadarChartComp 
+              key={selectedSubZoneId || 'all'}
               data={radarData} 
               onCategoryClick={setSelectedCategory} 
             />
@@ -627,7 +628,7 @@ export default function Sidebar({
             {/* Specific Category Charts (Pass/Fail metrics & Ranking) */}
             <section className="animate-in fade-in slide-in-from-bottom-8 duration-500 mt-8">
               <CategoryDetailCharts
-                facilities={zoneFacilities}
+                facilities={displayFacilities}
                 categoryScores={data.categoryScores}
                 measurements={data.measurements}
                 selectedCategory={selectedCategory}
@@ -639,7 +640,7 @@ export default function Sidebar({
           <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-8">
             <h3 className="text-lg font-bold text-zinc-900 mb-4">종합 시설 접근성 순위</h3>
             <BarChartComp 
-              facilities={zoneFacilities}
+              facilities={displayFacilities}
               categoryScores={data.categoryScores}
               selectedCategory="ALL"
               onSelectFacility={onSelectFacility}
