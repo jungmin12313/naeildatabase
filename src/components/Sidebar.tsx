@@ -56,6 +56,7 @@ export default function Sidebar({
   const [expandedZoneId, setExpandedZoneId] = useState<string | null>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any[]>([]);
+  const [reselectingSubZoneId, setReselectingSubZoneId] = useState<string | null>(null);
 
   const handleStartEdit = (z: any) => {
     setEditingZoneId(z.id);
@@ -143,10 +144,22 @@ export default function Sidebar({
                 if (onUpdateZones && drawingTargetZoneId) {
                   const newZones = data.zones.map(z => {
                     if (z.id === drawingTargetZoneId) {
+                      // @ts-ignore
+                      let updatedSubZones = z.subZones ? [...z.subZones] : [];
+                      
+                      if (reselectingSubZoneId) {
+                        updatedSubZones = updatedSubZones.map((s: any) => 
+                          s.id === reselectingSubZoneId 
+                            ? { ...s, polygon: newSub.polygon, final_index: newSub.final_index, name: newSub.name } 
+                            : s
+                        );
+                      } else {
+                        updatedSubZones.push(newSub as any);
+                      }
+
                       return {
                         ...z,
-                        // @ts-ignore
-                        subZones: [...(z.subZones || []), newSub]
+                        subZones: updatedSubZones
                       };
                     }
                     return z;
@@ -160,10 +173,11 @@ export default function Sidebar({
                     setEditForm(targetZone.subZones ? [...targetZone.subZones] : []);
                   }
                 }
-
+                
                 if (setIsDrawingMode) setIsDrawingMode(false);
                 if (setDrawnPolygon) setDrawnPolygon([]);
                 if (setDrawingTargetZoneId) setDrawingTargetZoneId(null);
+                setReselectingSubZoneId(null);
                 
                 // Show the edit form for the newly added subzone
                 setTimeout(() => {
@@ -244,9 +258,19 @@ export default function Sidebar({
                                 >
                                   {sub.final_index !== null ? Number(sub.final_index).toFixed(1) : '자동'}
                                 </div>
-                                <button onClick={() => handleRemoveSub(idx)} className="text-xs text-red-500 hover:bg-red-50 p-1.5 rounded font-bold">
-                                  삭제
-                                </button>
+                                <div className="flex flex-col gap-1">
+                                  <button onClick={() => {
+                                    setReselectingSubZoneId(sub.id);
+                                    if (setIsDrawingMode) setIsDrawingMode(true);
+                                    if (setDrawingTargetZoneId) setDrawingTargetZoneId(z.id);
+                                    handleSaveSub(z); 
+                                  }} className="text-xs text-blue-500 hover:bg-blue-50 p-1.5 rounded font-bold">
+                                    ✏️ 재선정
+                                  </button>
+                                  <button onClick={() => handleRemoveSub(idx)} className="text-xs text-red-500 hover:bg-red-50 p-1.5 rounded font-bold">
+                                    🗑️ 삭제
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -363,10 +387,21 @@ export default function Sidebar({
   // Zone Selected View (F2 & F4 concepts)
   // @ts-ignore
   const selectedSubZone = selectedZone.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
-  const displayFacilities = selectedSubZone 
+  
+  let displayFacilities = zoneFacilities;
+  if (selectedSubZoneId === 'unassigned') {
     // @ts-ignore
-    ? zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }))))
-    : zoneFacilities;
+    const allSubZonePolygons = (selectedZone.subZones || []).map(s => s.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })));
+    displayFacilities = zoneFacilities.filter(f => {
+      if (!f.location) return false;
+      const pt = { lat: f.location.lat, lng: f.location.lng };
+      return !allSubZonePolygons.some((poly: any) => isPointInPolygon(pt, poly));
+    });
+  } else if (selectedSubZone) {
+    // @ts-ignore
+    const poly = selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }));
+    displayFacilities = zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, poly));
+  }
 
   const zoneScores = data.categoryScores.filter(cs => displayFacilities.some(f => f.id === cs.facility_id));
   const avgScores: Record<string, { total: number, count: number }> = {
@@ -396,12 +431,12 @@ export default function Sidebar({
   });
 
   // Calculate facility ranking for the selected category (or overall if null, but user wants category-specific)
-  let rankingTitle = selectedSubZone ? `${selectedSubZone.name} 전체 시설 접근성 순위` : "전체 시설 접근성 순위";
+  let rankingTitle = selectedSubZone ? `${selectedSubZone.name} 전체 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? "미지정 구역 전체 시설 접근성 순위" : "전체 시설 접근성 순위");
   let ranking = displayFacilities.map(f => {
     let scores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
     if (selectedCategory) {
       scores = scores.filter(cs => cs.category === selectedCategory);
-      rankingTitle = selectedSubZone ? `${selectedSubZone.name} ${selectedCategory.split('_')[1]} 시설 접근성 순위` : `${selectedCategory.split('_')[1]} 시설 접근성 순위`;
+      rankingTitle = selectedSubZone ? `${selectedSubZone.name} ${selectedCategory.split('_')[1]} 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? `미지정 구역 ${selectedCategory.split('_')[1]} 시설 접근성 순위` : `${selectedCategory.split('_')[1]} 시설 접근성 순위`);
     }
     const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
     return { ...f, avgScore: avg, hasData: scores.length > 0 };
@@ -487,6 +522,23 @@ export default function Sidebar({
                   </button>
                 );
               })}
+              
+              {/* Virtual Unassigned Zone Button */}
+              <button 
+                onClick={() => onSelectSubZone && onSelectSubZone(selectedSubZoneId === 'unassigned' ? null : 'unassigned')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer mt-2 ${
+                selectedSubZoneId === 'unassigned'
+                  ? 'border-gray-500 bg-gray-50 shadow-md ring-2 ring-gray-500 ring-opacity-20 transform scale-[1.02]'
+                  : 'border-zinc-200 bg-white hover:border-gray-300 hover:shadow-md'
+              }`}
+              >
+                <span className={`font-bold text-sm ${selectedSubZoneId === 'unassigned' ? 'text-gray-800' : 'text-zinc-600'}`}>
+                  미지정 구역 {selectedSubZoneId === 'unassigned' && <span className="ml-1 text-xs opacity-70">(선택됨)</span>}
+                </span>
+                <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-gray-100 text-gray-500">
+                  나머지 시설
+                </span>
+              </button>
             </div>
           ) : (
             <div className="text-sm text-zinc-500 bg-zinc-50 p-4 rounded-2xl border border-zinc-100 text-center">

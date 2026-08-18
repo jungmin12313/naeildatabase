@@ -171,11 +171,12 @@ export default function KakaoMap({
           <div key={zone.id}>
             <Polygon
               path={path}
-              strokeWeight={isSelected ? 4 : 2}
-              strokeColor={isSelected ? '#3b82f6' : mainColor}
+              strokeWeight={isSelected ? (selectedSubZoneId === 'unassigned' ? 4 : 3) : 2}
+              strokeColor={isSelected ? (selectedSubZoneId === 'unassigned' ? '#4b5563' : '#3b82f6') : '#71717a'}
               strokeOpacity={0.8}
-              fillColor={mainColor}
-              fillOpacity={isSelected ? 0.6 : 0.4}
+              strokeStyle={isSelected ? 'solid' : 'dashed'}
+              fillColor={isSelected ? (selectedSubZoneId === 'unassigned' ? '#9ca3af' : mainColor) : '#e4e4e7'}
+              fillOpacity={isSelected ? (selectedSubZoneId === 'unassigned' ? 0.3 : 0.6) : 0.4}
               onClick={() => onSelectZone(zone.id)}
             />
             {!selectedZoneId && (
