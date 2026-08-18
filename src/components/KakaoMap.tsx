@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Map, Polygon, CustomOverlayMap } from 'react-kakao-maps-sdk';
 import { getColorForGrade, getColorForScore } from '@/constants/colors';
 
@@ -47,21 +47,31 @@ export default function KakaoMap({
 }: KakaoMapProps) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [kakaoError, setKakaoError] = useState(false);
+  const isLoadedRef = useRef(false);
 
   useEffect(() => {
-    // Wait for the script to load via Next.js <Script> in layout
+    // If it's already loaded
+    if (window.kakao && window.kakao.maps) {
+      window.kakao.maps.load(() => {
+        setScriptLoaded(true);
+        isLoadedRef.current = true;
+      });
+      return;
+    }
+
+    // Otherwise wait for it
     const checkKakao = setInterval(() => {
       if (window.kakao && window.kakao.maps) {
         window.kakao.maps.load(() => {
           setScriptLoaded(true);
+          isLoadedRef.current = true;
         });
         clearInterval(checkKakao);
       }
     }, 100);
 
-    // Timeout after 5s if Kakao fails to load (e.g. no valid key)
     const timeout = setTimeout(() => {
-      if (!scriptLoaded) {
+      if (!isLoadedRef.current) {
         setKakaoError(true);
         clearInterval(checkKakao);
       }
@@ -71,7 +81,7 @@ export default function KakaoMap({
       clearInterval(checkKakao);
       clearTimeout(timeout);
     };
-  }, [scriptLoaded]);
+  }, []);
 
   // Center on Gwangju (where the data '전대후문' is)
   const defaultCenter = { lat: 35.176, lng: 126.912 };
