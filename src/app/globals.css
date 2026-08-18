@@ -42,3 +42,19 @@ body {
     display: block !important;
   }
 }
+
+/* Custom Scrollbar for horizontal chart scrolling */
+.custom-scrollbar::-webkit-scrollbar { 
+  height: 8px; 
+}
+.custom-scrollbar::-webkit-scrollbar-track { 
+  background: #f4f4f5; 
+  border-radius: 8px; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+  background: #d4d4d8; 
+  border-radius: 8px; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { 
+  background: #a1a1aa; 
+}

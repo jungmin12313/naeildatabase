@@ -3,8 +3,13 @@ import { MockData } from '@/app/page';
 import RadarChartComp from './RadarChartComp';
 import BarChartComp from './BarChartComp';
 import FacilityDetail from './FacilityDetail';
+import dynamic from 'next/dynamic';
 import { ChevronRight, ArrowLeft, MapPin, Printer } from 'lucide-react';
-import { getColorForGrade } from '@/constants/colors';
+
+const CategoryDetailCharts = dynamic(() => import('./CategoryDetailCharts'), { ssr: false });
+import { getColorForGrade, getColorForScore } from '@/constants/colors';
+import { useAuth } from '@/contexts/AuthContext';
+import { isPointInPolygon } from '@/utils/geo';
 
 interface SidebarProps {
   data: MockData;
@@ -15,6 +20,15 @@ interface SidebarProps {
   onBackToZones: () => void;
   onBackToZone: () => void;
   onSelectZone: (id: string) => void;
+  onUpdateZones?: (zones: MockData['zones']) => void;
+  isDrawingMode?: boolean;
+  setIsDrawingMode?: (val: boolean) => void;
+  drawingTargetZoneId?: string | null;
+  setDrawingTargetZoneId?: (val: string | null) => void;
+  drawnPolygon?: {lat: number, lng: number}[];
+  setDrawnPolygon?: (val: {lat: number, lng: number}[]) => void;
+  selectedSubZoneId?: string | null;
+  onSelectSubZone?: (id: string | null) => void;
 }
 
 export default function Sidebar({
@@ -25,39 +39,292 @@ export default function Sidebar({
   onSelectFacility,
   onBackToZones,
   onBackToZone,
-  onSelectZone
+  onSelectZone,
+  onUpdateZones,
+  isDrawingMode,
+  setIsDrawingMode,
+  drawingTargetZoneId,
+  setDrawingTargetZoneId,
+  drawnPolygon,
+  setDrawnPolygon,
+  selectedSubZoneId,
+  onSelectSubZone
 }: SidebarProps) {
   
+  const { role } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [expandedZoneId, setExpandedZoneId] = useState<string | null>(null);
+  const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<any[]>([]);
+
+  const handleStartEdit = (z: any) => {
+    setEditingZoneId(z.id);
+    // @ts-ignore
+    setEditForm(z.subZones ? [...z.subZones] : []);
+  };
+
+  const handleAddSub = () => {
+    setEditForm([...editForm, { id: 'z_new_' + Date.now(), name: '', final_index: null }]);
+  };
+
+  const handleUpdateSub = (index: number, field: string, value: any) => {
+    const newForm = [...editForm];
+    newForm[index] = { ...newForm[index], [field]: value };
+    setEditForm(newForm);
+  };
+
+  const handleRemoveSub = (index: number) => {
+    const newForm = [...editForm];
+    newForm.splice(index, 1);
+    setEditForm(newForm);
+  };
+
+  const handleSaveSub = (z: any) => {
+    if (onUpdateZones) {
+      const newZones = data.zones.map((zone) => {
+        if (zone.id === z.id) {
+          return { ...zone, subZones: editForm };
+        }
+        return zone;
+      });
+      // @ts-ignore
+      onUpdateZones(newZones as any);
+    }
+    setEditingZoneId(null);
+  };
+
+  if (isDrawingMode) {
+    return (
+      <div className="flex flex-col h-full bg-white items-center justify-center p-8 text-center animate-in fade-in">
+        <MapPin size={48} className="text-blue-500 mb-4 animate-bounce" />
+        <h2 className="text-xl font-bold text-zinc-900 mb-2">하위 구역 그리기 모드</h2>
+        <p className="text-sm text-zinc-500 mb-6">지도에 클릭하여 다각형의 꼭짓점을 찍어 구역을 설정해주세요.</p>
+        
+        <div className="bg-zinc-50 p-4 rounded-xl w-full border border-zinc-100 mb-6 text-left space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-zinc-500">선택된 꼭짓점:</span>
+            <span className="font-bold text-zinc-700">{drawnPolygon?.length || 0}개</span>
+          </div>
+        </div>
+
+        <div className="flex gap-2 w-full">
+          <button 
+            onClick={() => {
+              if (drawnPolygon && drawnPolygon.length >= 3) {
+                // Calculate score based on facilities in drawnPolygon
+                const facilitiesInPolygon = data.facilities.filter(f => 
+                  f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, drawnPolygon)
+                );
+                
+                let scoreSum = 0;
+                let scoreCount = 0;
+                
+                facilitiesInPolygon.forEach(f => {
+                  const fScores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+                  fScores.forEach(cs => {
+                    scoreSum += cs.score as number;
+                    scoreCount++;
+                  });
+                });
+                
+                const avgScore = scoreCount > 0 ? (scoreSum / scoreCount) : null;
+
+                const newSub = {
+                  id: 'sub_' + Date.now(),
+                  name: `신규 구역 (${facilitiesInPolygon.length}개 시설)`,
+                  final_index: avgScore,
+                  polygon: {
+                    type: 'MultiPolygon',
+                    coordinates: [[drawnPolygon.map(p => [p.lng, p.lat])]]
+                  }
+                };
+
+                // Apply newSub to the target zone
+                if (onUpdateZones && drawingTargetZoneId) {
+                  const newZones = data.zones.map(z => {
+                    if (z.id === drawingTargetZoneId) {
+                      return {
+                        ...z,
+                        // @ts-ignore
+                        subZones: [...(z.subZones || []), newSub]
+                      };
+                    }
+                    return z;
+                  });
+                  // @ts-ignore
+                  onUpdateZones(newZones as any);
+                  
+                  const targetZone = newZones.find(z => z.id === drawingTargetZoneId);
+                  if (targetZone) {
+                    // @ts-ignore
+                    setEditForm(targetZone.subZones ? [...targetZone.subZones] : []);
+                  }
+                }
+
+                if (setIsDrawingMode) setIsDrawingMode(false);
+                if (setDrawnPolygon) setDrawnPolygon([]);
+                if (setDrawingTargetZoneId) setDrawingTargetZoneId(null);
+                
+                // Show the edit form for the newly added subzone
+                setTimeout(() => {
+                  setExpandedZoneId(drawingTargetZoneId || null);
+                  setEditingZoneId(drawingTargetZoneId || null);
+                }, 100);
+                
+              } else {
+                alert('다각형을 구성하기 위해 최소 3개의 점이 꼭 필요합니다.');
+              }
+            }}
+            className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors"
+          >
+            그리기 완료
+          </button>
+          <button 
+            onClick={() => {
+              if (setIsDrawingMode) setIsDrawingMode(false);
+              if (setDrawnPolygon) setDrawnPolygon([]);
+              if (setDrawingTargetZoneId) setDrawingTargetZoneId(null);
+            }}
+            className="flex-1 bg-zinc-200 text-zinc-700 font-bold py-3 rounded-xl hover:bg-zinc-300 transition-colors"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!selectedZone) {
     return (
-      <div className="flex-1 p-8 flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6">
-          <MapPin size={32} />
+      <div className="flex flex-col h-full print:block print:h-auto">
+        <div className="p-6 border-b border-zinc-200 bg-white sticky top-0 z-10 print:hidden">
+          <h2 className="text-xl font-bold text-zinc-900 mb-1">조사된 구역 목록</h2>
+          <p className="text-sm text-zinc-500">클릭하여 해당 구역의 세부 데이터를 확인하세요.</p>
         </div>
-        <h2 className="text-2xl font-bold text-zinc-900">구역을 선택해주세요</h2>
-        <p className="mt-2 text-zinc-500 max-w-xs">지도에서 조사된 구역을 클릭하면 상세 진단 데이터와 차트를 확인할 수 있습니다.</p>
-        
-        <div className="mt-12 w-full text-left">
-          <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">조사된 구역 목록</h3>
+        <div className="flex-1 overflow-y-auto p-4 bg-zinc-50 print:overflow-visible">
           <div className="space-y-3">
-            {data.zones.map(z => (
-              <button 
-                key={z.id} 
-                onClick={() => onSelectZone(z.id)}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-zinc-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
-              >
-                <span className="font-medium text-zinc-800">{z.name}</span>
-                <span className="text-sm px-2.5 py-1 rounded-full font-medium" 
-                  style={{ 
-                    backgroundColor: getColorForGrade(z.color_grade).fill + '33', 
-                    color: getColorForGrade(z.color_grade).stroke 
-                  }}>
-                  {z.final_index !== null ? (z.final_index as number).toFixed(1) : '산출보류'}
-                </span>
-              </button>
-            ))}
+            {data.zones.map((z) => {
+              const score = z.final_index as number | null;
+              const mainColor = getColorForScore(score);
+              const isExpanded = expandedZoneId === z.id;
+              
+              return (
+                <div key={z.id} className={`rounded-xl border overflow-hidden transition-shadow ${isExpanded ? 'border-zinc-300 shadow-md' : 'border-zinc-200 shadow-sm hover:shadow-md'}`}>
+                  <button 
+                    onClick={() => setExpandedZoneId(isExpanded ? null : z.id)}
+                    className="w-full flex items-center justify-between p-4 bg-white text-left transition-colors hover:bg-zinc-50"
+                  >
+                    <span className="font-medium text-zinc-800">{z.name}</span>
+                    <span className="text-sm px-2.5 py-1 rounded-full font-medium" 
+                      style={{ 
+                        backgroundColor: mainColor + '22', 
+                        color: mainColor 
+                      }}>
+                      {score !== null ? score.toFixed(1) : '산출보류'}
+                    </span>
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="bg-zinc-50 border-t border-zinc-100 p-2 space-y-2">
+                      {editingZoneId === z.id ? (
+                        <div className="p-2 border border-zinc-200 rounded-lg bg-white shadow-inner">
+                          <h4 className="text-xs font-bold text-zinc-700 mb-3">하위 구역 편집</h4>
+                          <div className="space-y-2 mb-3">
+                            {editForm.map((sub, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <input 
+                                  type="text" 
+                                  value={sub.name} 
+                                  onChange={(e) => handleUpdateSub(idx, 'name', e.target.value)} 
+                                  placeholder="구역 이름" 
+                                  className="flex-1 text-sm p-1.5 border border-zinc-200 rounded focus:outline-none focus:border-blue-400"
+                                />
+                                <div 
+                                  className="w-16 text-xs p-1.5 border border-zinc-100 bg-zinc-50 rounded text-center font-bold text-zinc-500 cursor-not-allowed"
+                                >
+                                  {sub.final_index !== null ? Number(sub.final_index).toFixed(1) : '자동'}
+                                </div>
+                                <button onClick={() => handleRemoveSub(idx)} className="text-xs text-red-500 hover:bg-red-50 p-1.5 rounded font-bold">
+                                  삭제
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <button 
+                            onClick={() => {
+                              if (setIsDrawingMode) setIsDrawingMode(true);
+                              if (setDrawingTargetZoneId) setDrawingTargetZoneId(z.id);
+                              // Save current form state so it's not lost
+                              handleSaveSub(z); 
+                            }} 
+                            className="w-full text-xs font-semibold text-blue-600 border border-blue-200 bg-blue-50 p-2 rounded mb-3 hover:bg-blue-100 transition-colors"
+                          >
+                            + 지도에서 하위 구역 그리기
+                          </button>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleSaveSub(z)} className="flex-1 bg-blue-600 text-white text-xs font-bold p-2 rounded hover:bg-blue-700 transition-colors">
+                              저장
+                            </button>
+                            <button onClick={() => setEditingZoneId(null)} className="flex-1 bg-zinc-200 text-zinc-700 text-xs font-bold p-2 rounded hover:bg-zinc-300 transition-colors">
+                              완료
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {/* @ts-ignore - subZones might not be in the type strictly yet */}
+                          {z.subZones && z.subZones.length > 0 ? (
+                            <>
+                              {/* @ts-ignore */}
+                              {z.subZones.map((sub: any) => {
+                                const subScore = sub.final_index as number | null;
+                                const subColor = getColorForScore(subScore);
+                                return (
+                                  <div
+                                    key={sub.id}
+                                    className="w-full flex items-center justify-between p-2 rounded-lg bg-white border border-zinc-100 text-left pl-6 relative"
+                                  >
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-zinc-300" />
+                                    <span className="text-sm text-zinc-700">{sub.name}</span>
+                                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" 
+                                      style={{ 
+                                        backgroundColor: subColor + '22', 
+                                        color: subColor 
+                                      }}>
+                                      {subScore !== null ? subScore.toFixed(1) : '-'}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          ) : (
+                            <div className="text-xs text-zinc-500 text-center py-2">
+                              세분화된 구역이 없습니다.
+                            </div>
+                          )}
+                          
+                          {(role === 'admin' || role === 'official') && (
+                            <button 
+                              onClick={() => handleStartEdit(z)}
+                              className="w-full flex items-center justify-center text-xs text-zinc-600 font-semibold p-2 mt-1 hover:bg-zinc-100 rounded-lg transition-colors border border-zinc-200 bg-white"
+                            >
+                              ⚙️ 하위 구역 관리
+                            </button>
+                          )}
+                          
+                          <button 
+                            onClick={() => onSelectZone(z.id)}
+                            className="w-full flex items-center justify-center text-xs text-blue-600 font-semibold p-2 mt-1 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 bg-white"
+                          >
+                            {z.name} 전체 상세 데이터 보기 <ChevronRight size={14} className="ml-1" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -94,7 +361,14 @@ export default function Sidebar({
   }
 
   // Zone Selected View (F2 & F4 concepts)
-  const zoneScores = data.categoryScores.filter(cs => zoneFacilities.some(f => f.id === cs.facility_id));
+  // @ts-ignore
+  const selectedSubZone = selectedZone.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
+  const displayFacilities = selectedSubZone 
+    // @ts-ignore
+    ? zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }))))
+    : zoneFacilities;
+
+  const zoneScores = data.categoryScores.filter(cs => displayFacilities.some(f => f.id === cs.facility_id));
   const avgScores: Record<string, { total: number, count: number }> = {
     'S1_보행로': { total: 0, count: 0 },
     'S2_출입구': { total: 0, count: 0 },
@@ -122,12 +396,12 @@ export default function Sidebar({
   });
 
   // Calculate facility ranking for the selected category (or overall if null, but user wants category-specific)
-  let rankingTitle = "전체 시설 접근성 순위";
-  let ranking = zoneFacilities.map(f => {
+  let rankingTitle = selectedSubZone ? `${selectedSubZone.name} 전체 시설 접근성 순위` : "전체 시설 접근성 순위";
+  let ranking = displayFacilities.map(f => {
     let scores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
     if (selectedCategory) {
       scores = scores.filter(cs => cs.category === selectedCategory);
-      rankingTitle = `${selectedCategory.split('_')[1]} 시설 접근성 순위`;
+      rankingTitle = selectedSubZone ? `${selectedSubZone.name} ${selectedCategory.split('_')[1]} 시설 접근성 순위` : `${selectedCategory.split('_')[1]} 시설 접근성 순위`;
     }
     const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
     return { ...f, avgScore: avg, hasData: scores.length > 0 };
@@ -153,7 +427,7 @@ export default function Sidebar({
           </div>
           <div className="text-right">
             <div className="text-xs text-zinc-500 mb-1">최종 넓이지수</div>
-            <div className="text-2xl font-bold" style={{ color: getColorForGrade(selectedZone.color_grade).stroke }}>
+            <div className="text-2xl font-bold" style={{ color: getColorForScore(selectedZone.final_index as number | null) }}>
               {selectedZone.final_index !== null ? (selectedZone.final_index as number).toFixed(1) : '-'}
             </div>
           </div>
@@ -161,6 +435,66 @@ export default function Sidebar({
       </div>
 
       <div className="p-6 space-y-8 flex-1">
+        {/* Sub-zones Section */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-zinc-900">세분화 하위 구역</h3>
+            {(role === 'admin' || role === 'official') && (
+              <button 
+                onClick={() => {
+                  onBackToZones();
+                  setTimeout(() => {
+                    setExpandedZoneId(selectedZone.id);
+                    setEditingZoneId(selectedZone.id);
+                    // @ts-ignore
+                    setEditForm(selectedZone.subZones ? [...selectedZone.subZones] : []);
+                  }, 50);
+                }}
+                className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded font-medium hover:bg-blue-100 transition-colors"
+              >
+                ⚙️ 관리
+              </button>
+            )}
+          </div>
+          {/* @ts-ignore */}
+          {selectedZone.subZones && selectedZone.subZones.length > 0 ? (
+            <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 space-y-2">
+              {/* @ts-ignore */}
+              {selectedZone.subZones.map((sub: any) => {
+                const subScore = sub.final_index as number | null;
+                const subColor = getColorForScore(subScore);
+                const isSelected = selectedSubZoneId === sub.id;
+                return (
+                  <button 
+                    key={sub.id} 
+                    onClick={() => onSelectSubZone && onSelectSubZone(isSelected ? null : sub.id)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500 ring-opacity-20 transform scale-[1.02]'
+                      : 'border-zinc-200 bg-white hover:border-blue-300 hover:shadow-md'
+                  }`}
+                  >
+                    <span className={`font-bold text-sm ${isSelected ? 'text-blue-800' : 'text-zinc-800'}`}>
+                      {sub.name} {isSelected && <span className="ml-1 text-xs opacity-70">(선택됨)</span>}
+                    </span>
+                    <span className="text-xs px-2.5 py-1 rounded-full font-bold" 
+                      style={{ 
+                        backgroundColor: isSelected ? '#3b82f6' : subColor + '22', 
+                        color: isSelected ? 'white' : subColor 
+                      }}>
+                      {subScore !== null ? subScore.toFixed(1) + '점' : '산출보류'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-sm text-zinc-500 bg-zinc-50 p-4 rounded-2xl border border-zinc-100 text-center">
+              설정된 하위 구역이 없습니다.
+            </div>
+          )}
+        </section>
+
         {/* Radar Chart Section */}
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -188,16 +522,17 @@ export default function Sidebar({
           </div>
         </section>
 
-        {/* Facility Ranking & Bar Chart shown conditionally or updated based on selectedCategory */}
-        {selectedCategory && (
+        {/* Facility Ranking & Category Specific Charts */}
+        {selectedCategory ? (
           <>
+            {/* Category Ranking List */}
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-zinc-900">{rankingTitle}</h3>
                 <span className="text-sm text-zinc-500">조사된 시설 {ranking.length}곳</span>
               </div>
-              <div className="space-y-2">
-                {ranking.slice(0, 10).map((f, i) => {
+              <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2">
+                {ranking.map((f, i) => {
                   const isBottom = i >= ranking.length - Math.min(3, ranking.length) || f.avgScore < 50; 
                   return (
                     <button 
@@ -229,17 +564,27 @@ export default function Sidebar({
               </div>
             </section>
 
-            {/* Bar Charts (F4) */}
-            <section className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-              <h3 className="text-lg font-bold text-zinc-900 mb-4">세부 측정 항목 통계</h3>
-              <BarChartComp 
+            {/* Specific Category Charts (Pass/Fail metrics & Ranking) */}
+            <section className="animate-in fade-in slide-in-from-bottom-8 duration-500 mt-8">
+              <CategoryDetailCharts
                 facilities={zoneFacilities}
                 categoryScores={data.categoryScores}
+                measurements={data.measurements}
                 selectedCategory={selectedCategory}
                 onSelectFacility={onSelectFacility}
               />
             </section>
           </>
+        ) : (
+          <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 mt-8">
+            <h3 className="text-lg font-bold text-zinc-900 mb-4">종합 시설 접근성 순위</h3>
+            <BarChartComp 
+              facilities={zoneFacilities}
+              categoryScores={data.categoryScores}
+              selectedCategory="ALL"
+              onSelectFacility={onSelectFacility}
+            />
+          </section>
         )}
       </div>
     </div>

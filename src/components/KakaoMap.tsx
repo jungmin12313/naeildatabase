@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Map, Polygon, CustomOverlayMap } from 'react-kakao-maps-sdk';
-import { getColorForGrade } from '@/constants/colors';
+import { getColorForGrade, getColorForScore } from '@/constants/colors';
 
 declare global {
   interface Window {
@@ -22,9 +22,25 @@ interface KakaoMapProps {
   zones: Zone[];
   selectedZoneId: string | null;
   onSelectZone: (id: string) => void;
+  isDrawingMode?: boolean;
+  drawnPolygon?: {lat: number, lng: number}[];
+  setDrawnPolygon?: (polygon: {lat: number, lng: number}[]) => void;
+  drawingTargetZoneId?: string | null;
+  selectedSubZoneId?: string | null;
+  onSelectSubZone?: (id: string) => void;
 }
 
-export default function KakaoMap({ zones, selectedZoneId, onSelectZone }: KakaoMapProps) {
+export default function KakaoMap({ 
+  zones, 
+  selectedZoneId, 
+  onSelectZone,
+  isDrawingMode,
+  drawnPolygon,
+  setDrawnPolygon,
+  drawingTargetZoneId,
+  selectedSubZoneId,
+  onSelectSubZone
+}: KakaoMapProps) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [kakaoError, setKakaoError] = useState(false);
 
@@ -94,12 +110,45 @@ export default function KakaoMap({ zones, selectedZoneId, onSelectZone }: KakaoM
     return <div className="w-full h-full bg-zinc-100 animate-pulse" />;
   }
 
+  const handleMapClick = (_t: any, mouseEvent: any) => {
+    if (isDrawingMode && setDrawnPolygon && drawnPolygon) {
+      setDrawnPolygon([
+        ...drawnPolygon,
+        { lat: mouseEvent.latLng.getLat(), lng: mouseEvent.latLng.getLng() }
+      ]);
+    }
+  };
+
   return (
-    <Map
-      center={defaultCenter}
-      style={{ width: '100%', height: '100%' }}
-      level={5}
-    >
+    <div className="relative w-full h-full">
+      {isDrawingMode && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-blue-600 text-white px-4 py-2 rounded-full font-bold shadow-lg animate-pulse">
+          지도에 클릭하여 다각형의 꼭짓점을 찍어주세요
+        </div>
+      )}
+      <Map
+        center={defaultCenter}
+        style={{ width: '100%', height: '100%', cursor: isDrawingMode ? 'crosshair' : 'default' }}
+        level={5}
+        onClick={handleMapClick}
+      >
+        {isDrawingMode && drawnPolygon && drawnPolygon.length > 0 && (
+          <Polygon
+            path={drawnPolygon}
+            strokeWeight={3}
+            strokeColor={'#db4040'}
+            strokeOpacity={0.8}
+            strokeStyle={'solid'}
+            fillColor={'#db4040'}
+            fillOpacity={0.4}
+          />
+        )}
+        {isDrawingMode && drawnPolygon && drawnPolygon.map((pos, idx) => (
+          <CustomOverlayMap key={idx} position={pos}>
+            <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2" />
+          </CustomOverlayMap>
+        ))}
+
       {zones.map((zone) => {
         if (!zone.polygon || !zone.polygon.coordinates || zone.polygon.coordinates.length === 0) return null;
         
@@ -110,7 +159,8 @@ export default function KakaoMap({ zones, selectedZoneId, onSelectZone }: KakaoM
           lng: coord[0]
         }));
         
-        const color = getColorForGrade(zone.color_grade);
+        const score = zone.final_index as number | null;
+        const mainColor = getColorForScore(score);
         const isSelected = selectedZoneId === zone.id;
 
         // Calculate center for label (rough approximation)
@@ -122,27 +172,72 @@ export default function KakaoMap({ zones, selectedZoneId, onSelectZone }: KakaoM
             <Polygon
               path={path}
               strokeWeight={isSelected ? 4 : 2}
-              strokeColor={isSelected ? '#3b82f6' : color.stroke}
+              strokeColor={isSelected ? '#3b82f6' : mainColor}
               strokeOpacity={0.8}
-              fillColor={color.fill}
+              fillColor={mainColor}
               fillOpacity={isSelected ? 0.6 : 0.4}
               onClick={() => onSelectZone(zone.id)}
             />
-            {(!selectedZoneId || isSelected) && (
+            {!selectedZoneId && (
               <CustomOverlayMap position={{ lat: centerLat, lng: centerLng }}>
                 <div 
-                  className={`px-3 py-1.5 rounded-lg shadow-sm border font-medium text-sm whitespace-nowrap cursor-pointer transition-all
+                  className={`px-3 py-1.5 rounded-lg shadow-sm border font-medium text-sm whitespace-nowrap cursor-pointer transition-all flex items-center
                     ${isSelected ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-105' : 'bg-white text-zinc-800 border-zinc-200 hover:border-zinc-400'}`}
                   onClick={() => onSelectZone(zone.id)}
                 >
                   {zone.name}
-                  {isSelected && <span className="ml-1 opacity-80 text-xs">선택됨</span>}
+                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${isSelected ? 'bg-blue-500 text-white' : 'bg-zinc-100 text-zinc-600'}`}>
+                    {score !== null ? `${score.toFixed(1)}점` : '산출보류'}
+                  </span>
                 </div>
               </CustomOverlayMap>
             )}
+
+            {/* Render subzones if this zone is selected OR if it is being drawn on */}
+            {(isSelected || (isDrawingMode && drawingTargetZoneId === zone.id)) && (zone as any).subZones && (zone as any).subZones.map((sub: any) => {
+              if (!sub.polygon || !sub.polygon.coordinates || sub.polygon.coordinates.length === 0) return null;
+              
+              const subPath = sub.polygon.coordinates[0][0].map((coord: number[]) => ({
+                lat: coord[1],
+                lng: coord[0]
+              }));
+              
+              const subScore = sub.final_index as number | null;
+              const subColor = getColorForScore(subScore);
+              
+              const subCenterLat = subPath.reduce((sum: number, p: any) => sum + p.lat, 0) / subPath.length;
+              const subCenterLng = subPath.reduce((sum: number, p: any) => sum + p.lng, 0) / subPath.length;
+
+              const isSubSelected = selectedSubZoneId === sub.id;
+
+              return (
+                <div key={sub.id}>
+                  <Polygon
+                    path={subPath}
+                    strokeWeight={isSubSelected ? 5 : 3}
+                    strokeColor={isSubSelected ? '#ef4444' : '#2563eb'}
+                    strokeOpacity={isSubSelected ? 1 : 0.8}
+                    fillColor={subColor}
+                    fillOpacity={isSubSelected ? 0.9 : 0.7}
+                    strokeStyle={isSubSelected ? 'solid' : 'dashed'}
+                    onClick={() => onSelectSubZone && onSelectSubZone(sub.id)}
+                  />
+                  <CustomOverlayMap position={{ lat: subCenterLat, lng: subCenterLng }}>
+                    <div 
+                      className={`px-2 py-1 backdrop-blur-sm rounded-md shadow border text-xs font-bold flex flex-col items-center cursor-pointer transition-transform ${isSubSelected ? 'bg-red-50 text-red-700 border-red-500 scale-110 z-10' : 'bg-white/90 text-zinc-800 border-zinc-200 hover:scale-105'}`}
+                      onClick={() => onSelectSubZone && onSelectSubZone(sub.id)}
+                    >
+                      <span>{sub.name}</span>
+                      <span style={{ color: isSubSelected ? '#ef4444' : subColor }}>{subScore !== null ? `${subScore.toFixed(1)}점` : '-'}</span>
+                    </div>
+                  </CustomOverlayMap>
+                </div>
+              );
+            })}
           </div>
         );
       })}
     </Map>
+    </div>
   );
 }

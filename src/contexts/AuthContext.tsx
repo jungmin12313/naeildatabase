@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
       
       {/* Floating Mock Auth Switcher for Dev/MVP */}
-      <div className="fixed bottom-4 right-4 z-50 bg-white p-3 rounded-2xl shadow-xl border border-zinc-200 flex flex-col items-end print:hidden">
-        <span className="text-xs font-bold text-zinc-500 mb-2 mr-1 tracking-wider uppercase">현재 접속 권한</span>
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-zinc-200 flex flex-col items-center print:hidden">
+        <span className="text-xs font-bold text-zinc-500 mb-2 tracking-wider uppercase">현재 접속 권한</span>
         <div className="flex space-x-1 bg-zinc-100 p-1 rounded-xl">
           <button 
             onClick={() => handleSetRole('viewer')}

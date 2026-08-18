@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { MockData } from '@/app/page';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 
 interface BarChartCompProps {
   facilities: MockData['facilities'];
@@ -16,12 +16,28 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
 
   // Prepare data for the selected category
   const chartData = facilities.map(f => {
-    const scoreObj = categoryScores.find(s => s.facility_id === f.id && s.category === selectedCategory);
+    let finalScore = 0;
+    let hasData = false;
+    
+    if (selectedCategory === "ALL") {
+      const fScores = categoryScores.filter(s => s.facility_id === f.id && s.score !== null);
+      if (fScores.length > 0) {
+        finalScore = fScores.reduce((acc, curr) => acc + (curr.score || 0), 0) / fScores.length;
+        hasData = true;
+      }
+    } else {
+      const scoreObj = categoryScores.find(s => s.facility_id === f.id && s.category === selectedCategory);
+      if (scoreObj && scoreObj.score !== null) {
+        finalScore = scoreObj.score;
+        hasData = true;
+      }
+    }
+    
     return {
       id: f.id,
       name: f.name,
-      score: scoreObj && scoreObj.score !== null ? Math.round(scoreObj.score) : 0,
-      hasData: scoreObj && scoreObj.score !== null
+      score: Math.round(finalScore),
+      hasData
     };
   }).filter(d => d.hasData).sort((a, b) => b.score - a.score); // Sort descending
 
@@ -32,10 +48,11 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
     <div className="w-full space-y-4">
       <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100">
         <h4 className="text-sm font-semibold text-zinc-700 mb-4 text-center">
-          {selectedCategory.split('_')[1]} 시설별 점수 (클릭 시 상세 이동)
+          {selectedCategory === "ALL" ? "종합 점수 전체 시설 순위 (가로 스크롤)" : `${selectedCategory.split('_')[1]} 전체 시설 순위 (가로 스크롤)`}
         </h4>
-        <div className="w-full h-64">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full overflow-x-auto overflow-y-hidden pb-2 custom-scrollbar">
+          <div style={{ minWidth: '100%', width: Math.max(100, chartData.length * 35) }} className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
                 margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
@@ -59,6 +76,7 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
                 dataKey="score" 
                 radius={[4, 4, 0, 0]} 
                 maxBarSize={40}
+                minPointSize={4}
                 onClick={(data: any) => {
                   if (data && data.id) {
                     onSelectFacility(data.id);
@@ -68,6 +86,13 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
                 }}
                 className="cursor-pointer"
               >
+                <LabelList 
+                  dataKey="score" 
+                  position="top" 
+                  fill="#71717a" 
+                  fontSize={10} 
+                  formatter={(val: any) => val === 0 ? '0' : val}
+                />
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
@@ -81,5 +106,6 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
         </div>
       </div>
     </div>
+  </div>
   );
 }
