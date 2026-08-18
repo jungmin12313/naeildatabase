@@ -146,12 +146,14 @@ export default function Home() {
       return !allSubZonePolygons.some((poly: any) => isPointInPolygon(pt, poly));
     });
   } else if (selectedSubZone) {
+    // @ts-ignore
     if (selectedSubZone.polygon) {
       // @ts-ignore
       const poly = selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }));
       displayFacilities = zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, poly));
     } else {
       // If polygon is missing but we have sub_zone_id matching (like from DB)
+      // @ts-ignore
       displayFacilities = zoneFacilities.filter(f => f.sub_zone_id === selectedSubZoneId);
     }
   }
