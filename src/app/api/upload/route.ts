@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import * as xlsx from 'xlsx';
 import * as turf from '@turf/helpers';
 import clustersKmeans from '@turf/clusters-kmeans';
-import convex from '@turf/convex';
 
 // Initialize Supabase Client with Service Role Key for backend operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -22,18 +21,21 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const workbook = xlsx.read(buffer, { type: 'buffer' });
-    
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    // Assuming row 1 is header
-    const rows = xlsx.utils.sheet_to_json<any>(worksheet);
+    const allRows: any[] = [];
+    workbook.SheetNames.forEach(sheetName => {
+      const worksheet = workbook.Sheets[sheetName];
+      const sheetRows = xlsx.utils.sheet_to_json<any>(worksheet);
+      if (sheetRows && sheetRows.length > 0) {
+        allRows.push(...sheetRows);
+      }
+    });
 
-    if (!rows || rows.length === 0) {
+    if (allRows.length === 0) {
       return NextResponse.json({ error: 'Empty excel file' }, { status: 400 });
     }
 
     // Parse valid facilities with GPS
-    const validFacilities = rows.filter(r => r['GPS']).map((r, index) => {
+    const validFacilities = allRows.filter(r => r['GPS']).map((r, index) => {
       const gpsString = r['GPS'] as string;
       const [latStr, lngStr] = gpsString.split(',').map(s => s.trim());
       const lat = parseFloat(latStr);
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Main Zone
     const mainZoneId = `z_${Date.now()}`;
-    const mainZoneName = rows[0]['프로젝트명'] || '업로드된 무장애지도';
+    const mainZoneName = allRows[0]['프로젝트명'] || '업로드된 무장애지도';
 
     // GeoJSON Points for clustering
     const points = turf.featureCollection(
@@ -90,11 +92,28 @@ export async function POST(request: NextRequest) {
       const subZoneId = `sz_${Date.now()}_${clusterId}`;
       const subZoneName = `${mainZoneName} 세부구역 ${clusterIdx++}`;
       
-      let polyGeoJson = null;
-      if (features.length >= 3) {
-        const fc = turf.featureCollection(features);
-        const hull = convex(fc);
-        if (hull) polyGeoJson = hull.geometry;
+      const clusterPoints = clustered.features.filter(f => f.properties?.cluster === parseInt(clusterId));
+      
+      let subZonePoly;
+      if (clusterPoints.length >= 1) {
+        const lats = clusterPoints.map(p => p.geometry.coordinates[1]);
+        const lngs = clusterPoints.map(p => p.geometry.coordinates[0]);
+        // Add a tiny buffer to make sure it's a valid polygon even for 1-2 points
+        const minLat = Math.min(...lats) - 0.0005;
+        const maxLat = Math.max(...lats) + 0.0005;
+        const minLng = Math.min(...lngs) - 0.0005;
+        const maxLng = Math.max(...lngs) + 0.0005;
+        
+        subZonePoly = turf.polygon([[
+          [minLng, minLat],
+          [maxLng, minLat],
+          [maxLng, maxLat],
+          [minLng, maxLat],
+          [minLng, minLat]
+        ]]);
+      } else {
+        // Fallback dummy polygon
+        subZonePoly = turf.polygon([[[0,0], [0,1], [1,1], [1,0], [0,0]]]);
       }
 
       // Track bounding points for main zone polygon
@@ -107,17 +126,28 @@ export async function POST(request: NextRequest) {
         id: subZoneId,
         zone_id: mainZoneId,
         name: subZoneName,
-        polygon: polyGeoJson,
+        polygon: subZonePoly.geometry,
         final_index: 80, // Mock score for now
       });
     }
 
-    // Main zone convex hull
+    // Main zone bounding box
     let mainPolyGeoJson = null;
-    if (mainPolygonCoords.length >= 3) {
-      const mainFc = turf.featureCollection(mainPolygonCoords.map(c => turf.point(c)));
-      const mainHull = convex(mainFc);
-      if (mainHull) mainPolyGeoJson = mainHull.geometry;
+    if (mainPolygonCoords.length >= 1) {
+      const lats = mainPolygonCoords.map(c => c[1]);
+      const lngs = mainPolygonCoords.map(c => c[0]);
+      const minLat = Math.min(...lats) - 0.001;
+      const maxLat = Math.max(...lats) + 0.001;
+      const minLng = Math.min(...lngs) - 0.001;
+      const maxLng = Math.max(...lngs) + 0.001;
+      
+      mainPolyGeoJson = turf.polygon([[
+        [minLng, minLat],
+        [maxLng, minLat],
+        [maxLng, maxLat],
+        [minLng, maxLat],
+        [minLng, minLat]
+      ]]).geometry;
     }
 
     const zoneToInsert = {
