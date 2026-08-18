@@ -70,6 +70,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             <a href="/admin/reviews" className="text-blue-600 hover:underline">AI 검수</a>
           )}
         </div>
+        
+        {/* Admin Excel Upload */}
+        {role === 'admin' && (
+          <div className="mt-3 border-t border-zinc-200 pt-3 w-full flex flex-col items-center">
+            <label className="cursor-pointer bg-zinc-800 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-zinc-900 transition-colors text-center w-full">
+              📥 엑셀 데이터 DB 자동 업로드
+              <input type="file" accept=".xlsx" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  alert('로컬에 설치된 Supabase DB로 업로드를 시작합니다. (터미널 로그를 확인해주세요)');
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                  if (!res.ok) throw new Error('Upload failed');
+                  const result = await res.json();
+                  alert(`업로드 성공! 총 ${result.zonesCount}개의 구역과 ${result.subZonesCount}개의 세부구역이 생성되었습니다. 새로고침을 해주세요.`);
+                } catch (err) {
+                  alert('업로드 중 오류가 발생했습니다.');
+                  console.error(err);
+                }
+              }} />
+            </label>
+            <p className="text-[10px] text-zinc-400 mt-1">
+              내일 현장답사.xlsx 파일을 올려주세요
+            </p>
+          </div>
+        )}
       </div>
     </AuthContext.Provider>
   );
