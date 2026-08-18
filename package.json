@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
+    "@turf/clusters-kmeans": "^7.4.0",
     "@turf/convex": "^7.4.0",
     "@turf/helpers": "^7.4.0",
     "lucide-react": "^1.31.0",

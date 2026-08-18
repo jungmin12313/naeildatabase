@@ -11,7 +11,9 @@ export type MockData = typeof mockDataRaw;
 
 export default function Home() {
   const [zonesData, setZonesData] = useState(mockDataRaw.zones);
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [facilitiesData, setFacilitiesData] = useState(mockDataRaw.facilities);
+  const [categoryScoresData, setCategoryScoresData] = useState(mockDataRaw.categoryScores);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>('z_1');
   const [selectedSubZoneId, setSelectedSubZoneId] = useState<string | null>(null);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -23,40 +25,80 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    let initialZones = mockDataRaw.zones;
-    const savedZones = localStorage.getItem('naeil_zonesData');
-    if (savedZones) {
+    async function fetchData() {
       try {
-        initialZones = JSON.parse(savedZones);
-      } catch (e) {
-        console.error('Failed to parse zonesData from localStorage', e);
-      }
-    }
-
-    // Recalculate main zone scores dynamically based on facility data
-    const recalculatedZones = initialZones.map(zone => {
-      const zoneFacilities = mockDataRaw.facilities.filter(f => f.zone_id === zone.id);
-      let totalFacilityScore = 0;
-      let validFacilityCount = 0;
-
-      zoneFacilities.forEach(f => {
-        const fScores = mockDataRaw.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
-        if (fScores.length > 0) {
-          const fAvg = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
-          totalFacilityScore += fAvg;
-          validFacilityCount++;
+        const { supabase } = await import('@/utils/supabase');
+        
+        // Fetch Zones, SubZones, Facilities, and CategoryScores
+        const [
+          { data: dbZones, error: zErr },
+          { data: dbSubZones, error: szErr },
+          { data: dbFacilities, error: fErr },
+          { data: dbCategoryScores, error: csErr }
+        ] = await Promise.all([
+          supabase.from('zones').select('*'),
+          supabase.from('sub_zones').select('*'),
+          supabase.from('facilities').select('*'),
+          supabase.from('category_scores').select('*')
+        ]);
+        
+        if (dbZones && dbZones.length > 0 && !zErr && !szErr && !fErr && !csErr) {
+          // Format data to match our mock data structure for compatibility
+          const formattedZones = dbZones.map((z: any) => ({
+            ...z,
+            subZones: dbSubZones?.filter((sz: any) => sz.zone_id === z.id) || []
+          }));
+          
+          setZonesData(formattedZones);
+          if (dbFacilities) setFacilitiesData(dbFacilities);
+          if (dbCategoryScores) setCategoryScoresData(dbCategoryScores);
+          setMounted(true);
+          return; // Exit early since we used Supabase
         }
+      } catch (err) {
+        console.error('Supabase fetch failed, falling back to mock data', err);
+      }
+
+      // Fallback to local storage and mock data
+      let initialZones = mockDataRaw.zones;
+      const savedZones = localStorage.getItem('naeil_zonesData');
+      if (savedZones) {
+        try {
+          initialZones = JSON.parse(savedZones);
+        } catch (e) {
+          console.error('Failed to parse zonesData from localStorage', e);
+        }
+      }
+
+      // Recalculate main zone scores dynamically based on facility data
+      const recalculatedZones = initialZones.map(zone => {
+        const zoneFacilities = mockDataRaw.facilities.filter(f => f.zone_id === zone.id);
+        let totalFacilityScore = 0;
+        let validFacilityCount = 0;
+
+        zoneFacilities.forEach(f => {
+          const fScores = mockDataRaw.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+          if (fScores.length > 0) {
+            const fAvg = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
+            totalFacilityScore += fAvg;
+            validFacilityCount++;
+          }
+        });
+
+        const avgScore = validFacilityCount > 0 ? (totalFacilityScore / validFacilityCount) : null;
+        return { ...zone, final_index: avgScore as any };
       });
 
-      const avgScore = validFacilityCount > 0 ? (totalFacilityScore / validFacilityCount) : null;
-      return { ...zone, final_index: avgScore as any };
-    });
-
-    setZonesData(recalculatedZones);
-    setMounted(true);
+      setZonesData(recalculatedZones);
+      setFacilitiesData(mockDataRaw.facilities);
+      setCategoryScoresData(mockDataRaw.categoryScores);
+      setMounted(true);
+    }
+    
+    fetchData();
   }, []);
 
-  // Sync zonesData to localStorage whenever it changes
+  // Sync zonesData to localStorage whenever it changes (only for mock mode, but safe to do always)
   useEffect(() => {
     if (mounted) {
       localStorage.setItem('naeil_zonesData', JSON.stringify(zonesData));
@@ -69,7 +111,7 @@ export default function Home() {
   const mockData = {
     ...mockDataRaw,
     zones: zonesData,
-    facilities: mockDataRaw.facilities.filter(f => {
+    facilities: facilitiesData.filter(f => {
       // Admin sees everything
       if (role === 'admin') return true;
       // Official sees their assigned zone's private/public, plus other zones' public
@@ -79,7 +121,8 @@ export default function Home() {
       }
       // Viewer sees only public
       return f.status === '공개';
-    })
+    }),
+    categoryScores: categoryScoresData
   };
 
   const selectedZone = mockData.zones.find(z => z.id === selectedZoneId) || null;
@@ -103,9 +146,14 @@ export default function Home() {
       return !allSubZonePolygons.some((poly: any) => isPointInPolygon(pt, poly));
     });
   } else if (selectedSubZone) {
-    // @ts-ignore
-    const poly = selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }));
-    displayFacilities = zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, poly));
+    if (selectedSubZone.polygon) {
+      // @ts-ignore
+      const poly = selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }));
+      displayFacilities = zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, poly));
+    } else {
+      // If polygon is missing but we have sub_zone_id matching (like from DB)
+      displayFacilities = zoneFacilities.filter(f => f.sub_zone_id === selectedSubZoneId);
+    }
   }
 
   return (

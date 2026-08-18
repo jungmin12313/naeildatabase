@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { MockData } from '@/app/page';
 import RadarChartComp from './RadarChartComp';
 import BarChartComp from './BarChartComp';

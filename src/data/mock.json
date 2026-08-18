@@ -67,23 +67,23 @@
           ]
         ]
       },
-      "final_index": 75,
+      "final_index": 12.479492915734525,
       "color_grade": "B",
       "subZones": [
         {
           "id": "z_1_1",
           "name": "전대후문 북측(세분화 구역)",
-          "final_index": 85.0
+          "final_index": 85
         },
         {
           "id": "z_1_2",
           "name": "전대후문 남측(세분화 구역)",
-          "final_index": 45.0
+          "final_index": 45
         },
         {
           "id": "z_1_3",
           "name": "전대후문 서측(세분화 구역)",
-          "final_index": 20.0
+          "final_index": 20
         }
       ]
     }
