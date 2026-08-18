@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       const lng = parseFloat(lngStr);
       
       return {
-        id: `f_${Date.now()}_${index}`,
+        id: r['ID'] ? `f_${r['ID']}` : `f_${Date.now()}_${index}`,
         name: r['장소명'] || `알 수 없는 장소 ${index}`,
         lat,
         lng,
@@ -58,8 +58,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Main Zone
-    const mainZoneId = `z_${Date.now()}`;
     const mainZoneName = allRows[0]['프로젝트명'] || '업로드된 무장애지도';
+    const safeName = mainZoneName.replace(/[^a-zA-Z0-9가-힣]/g, '');
+    const mainZoneId = safeName ? `z_${safeName}` : `z_${Date.now()}`;
 
     // GeoJSON Points for clustering
     const points = turf.featureCollection(
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     let clusterIdx = 1;
     for (const [clusterId, features] of Object.entries(clusters)) {
-      const subZoneId = `sz_${Date.now()}_${clusterId}`;
+      const subZoneId = `sz_${safeName || Date.now()}_${clusterId}`;
       const subZoneName = `${mainZoneName} 세부구역 ${clusterIdx++}`;
       
       const clusterPoints = clustered.features.filter(f => f.properties?.cluster === parseInt(clusterId));
@@ -168,20 +169,20 @@ export async function POST(request: NextRequest) {
       location: { lat: f.lat, lng: f.lng }
     }));
 
-    // 1. Insert Zone
-    const { error: zErr } = await supabase.from('zones').insert([zoneToInsert]);
+    // 1. Insert/Upsert Zone
+    const { error: zErr } = await supabase.from('zones').upsert([zoneToInsert], { onConflict: 'id' });
     if (zErr) throw new Error(`Zone Insert Error: ${zErr.message}`);
 
-    // 2. Insert SubZones
-    const { error: szErr } = await supabase.from('sub_zones').insert(subZonesToInsert);
+    // 2. Insert/Upsert SubZones
+    const { error: szErr } = await supabase.from('sub_zones').upsert(subZonesToInsert, { onConflict: 'id' });
     if (szErr) throw new Error(`SubZone Insert Error: ${szErr.message}`);
 
-    // 3. Insert Facilities
+    // 3. Insert/Upsert Facilities
     // Break into chunks if too many
     const chunkSize = 100;
     for (let i = 0; i < facilitiesToInsert.length; i += chunkSize) {
       const chunk = facilitiesToInsert.slice(i, i + chunkSize);
-      const { error: fErr } = await supabase.from('facilities').insert(chunk);
+      const { error: fErr } = await supabase.from('facilities').upsert(chunk, { onConflict: 'id' });
       if (fErr) throw new Error(`Facility Insert Error: ${fErr.message}`);
     }
 
