@@ -177,6 +177,7 @@ export default function Home() {
           data={mockData}
           selectedZone={selectedZone}
           zoneFacilities={zoneFacilities}
+          displayFacilities={displayFacilities}
           selectedFacility={selectedFacility}
           onSelectFacility={setSelectedFacilityId}
           onBackToZones={() => {
@@ -188,9 +189,13 @@ export default function Home() {
             setSelectedSubZoneId(null);
             setSelectedFacilityId(null);
           }}
-          onSelectZone={(id) => {
-            setSelectedZoneId(id);
-            setSelectedSubZoneId(null);
+          onSelectZone={(zoneId, subZoneId) => {
+            setSelectedZoneId(zoneId);
+            if (subZoneId) {
+              setSelectedSubZoneId(subZoneId);
+            } else {
+              setSelectedSubZoneId(null);
+            }
             setSelectedFacilityId(null);
           }}
           selectedSubZoneId={selectedSubZoneId}
