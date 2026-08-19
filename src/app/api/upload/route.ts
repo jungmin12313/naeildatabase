@@ -40,27 +40,37 @@ export async function POST(request: NextRequest) {
       const [latStr, lngStr] = gpsString.split(',').map(s => s.trim());
       const lat = parseFloat(latStr);
       const lng = parseFloat(lngStr);
+
+      let x1 = parseFloat(r['유효폭']) || parseFloat(r['문너비']) || 0;
+      if (x1 > 0 && x1 < 10) x1 *= 100; // convert meters to cm if needed
       
-      const doorWidth = parseFloat(r['유효폭']) || parseFloat(r['문너비']) || 0;
-      const stepHeight = parseFloat(r['단차']) || 0;
-      const incline = parseFloat(r['기울기']) || 0;
+      const x2 = parseFloat(r['단차']) || 0;
+      const x3 = parseFloat(r['기울기']) || 0;
       
-      // Calculate a basic score out of 100
-      let fScore = 100;
-      if (stepHeight > 0) fScore -= 40;
-      if (doorWidth > 0 && doorWidth < 0.9) fScore -= 30;
-      if (incline > 0.083) fScore -= 30; // 1/12
-      fScore = Math.max(0, fScore);
+      // 출입구(S2) 산출 공식 적용
+      const s_width = Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100));
+      const s_step = Math.min(100, Math.max(0, ((6 - x2) / (6 - 2)) * 100));
+      const s_slope = Math.min(100, Math.max(0, ((14.4 - x3) / (14.4 - 4.8)) * 100));
       
+      let s_step_slope;
+      if (x2 <= 2) {
+        s_step_slope = 100;
+      } else {
+        s_step_slope = 0.5 * s_step + 0.5 * s_slope;
+      }
+      
+      let fScore = 0.5 * s_width + 0.5 * s_step_slope;
+      if (isNaN(fScore)) fScore = 0;
+
       return {
         id: r['ID'] ? `f_${r['ID']}` : `f_${Date.now()}_${index}`,
         name: r['장소명'] || `알 수 없는 장소 ${index}`,
         lat,
         lng,
         category: r['카테고리'] || '일반',
-        doorWidth,
-        stepHeight,
-        incline,
+        doorWidth: x1,
+        stepHeight: x2,
+        incline: x3,
         score: fScore
       };
     }).filter(f => !isNaN(f.lat) && !isNaN(f.lng));

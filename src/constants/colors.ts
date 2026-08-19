@@ -25,9 +25,9 @@ export function getColorForGrade(grade: 'A' | 'B' | 'C' | '산출보류' | strin
   return ZONE_COLORS[grade as keyof typeof ZONE_COLORS] || ZONE_COLORS['산출보류'];
 }
 
-export function getColorForScore(score: number | null) {
-  if (score === null) return '#9ca3af'; // 산출보류 회색
-  
+export function getColorForScore(score: number | null): string {
+  if (score === null || isNaN(score)) return '#9ca3af'; // Gray for null/NaN
+
   // 25점 이하: 빨간색 고정
   if (score <= 25) return '#dd3333';
   if (score >= 100) return '#81d742';
