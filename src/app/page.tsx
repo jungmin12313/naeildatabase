@@ -10,10 +10,10 @@ import { isPointInPolygon } from '@/utils/geo';
 export type MockData = typeof mockDataRaw;
 
 export default function Home() {
-  const [zonesData, setZonesData] = useState(mockDataRaw.zones);
-  const [facilitiesData, setFacilitiesData] = useState(mockDataRaw.facilities);
-  const [categoryScoresData, setCategoryScoresData] = useState(mockDataRaw.categoryScores);
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>('z_1');
+  const [zonesData, setZonesData] = useState<any[]>([]);
+  const [facilitiesData, setFacilitiesData] = useState<any[]>([]);
+  const [categoryScoresData, setCategoryScoresData] = useState<any[]>([]);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [selectedSubZoneId, setSelectedSubZoneId] = useState<string | null>(null);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -61,44 +61,18 @@ export default function Home() {
           setMounted(true);
           return; // Exit early since we used Supabase
         }
+        
+        // If we reach here, Supabase is empty or failed, so start with empty arrays
+        setZonesData([]);
+        setFacilitiesData([]);
+        setCategoryScoresData([]);
+        setMounted(true);
       } catch (err) {
-        console.error('Supabase fetch failed, falling back to mock data', err);
+        setZonesData([]);
+        setFacilitiesData([]);
+        setCategoryScoresData([]);
+        setMounted(true);
       }
-
-      // Fallback to local storage and mock data
-      let initialZones = mockDataRaw.zones;
-      const savedZones = localStorage.getItem('naeil_zonesData');
-      if (savedZones) {
-        try {
-          initialZones = JSON.parse(savedZones);
-        } catch (e) {
-          console.error('Failed to parse zonesData from localStorage', e);
-        }
-      }
-
-      // Recalculate main zone scores dynamically based on facility data
-      const recalculatedZones = initialZones.map(zone => {
-        const zoneFacilities = mockDataRaw.facilities.filter(f => f.zone_id === zone.id);
-        let totalFacilityScore = 0;
-        let validFacilityCount = 0;
-
-        zoneFacilities.forEach(f => {
-          const fScores = mockDataRaw.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
-          if (fScores.length > 0) {
-            const fAvg = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
-            totalFacilityScore += fAvg;
-            validFacilityCount++;
-          }
-        });
-
-        const avgScore = validFacilityCount > 0 ? (totalFacilityScore / validFacilityCount) : null;
-        return { ...zone, final_index: avgScore as any };
-      });
-
-      setZonesData(recalculatedZones);
-      setFacilitiesData(mockDataRaw.facilities);
-      setCategoryScoresData(mockDataRaw.categoryScores);
-      setMounted(true);
     }
     
     fetchData();
