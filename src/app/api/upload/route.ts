@@ -67,70 +67,51 @@ export async function POST(request: NextRequest) {
       validFacilities.map(f => turf.point([f.lng, f.lat], { id: f.id }))
     );
 
-    // Dynamic K calculation (roughly 1 subzone per 30 facilities, max 10, min 2)
-    const k = Math.min(Math.max(Math.ceil(validFacilities.length / 30), 2), 10);
-
-    // K-Means clustering
-    const clustered = clustersKmeans(points, { numberOfClusters: k });
-
-    // Group features by cluster
-    const clusters: { [key: number]: any[] } = {};
-    clustered.features.forEach(feature => {
-      const clusterId = feature.properties.cluster;
-      if (clusterId !== undefined) {
-        if (!clusters[clusterId]) clusters[clusterId] = [];
-        clusters[clusterId].push(feature);
-      }
-    });
-
-    // Prepare Supabase Inserts
+    // ---------------------------------------------------------
+    // No more K-Means Clustering! Just one sub-zone for everything
+    // ---------------------------------------------------------
     const subZonesToInsert = [];
     const facilityToSubZoneMap: Record<string, string> = {};
     const mainPolygonCoords: any[] = [];
 
-    let clusterIdx = 1;
-    for (const [clusterId, features] of Object.entries(clusters)) {
-      const subZoneId = `sz_${safeName || Date.now()}_${clusterId}`;
-      const subZoneName = `${mainZoneName} 세부구역 ${clusterIdx++}`;
-      
-      const clusterPoints = clustered.features.filter(f => f.properties?.cluster === parseInt(clusterId));
-      
-      let subZonePoly;
-      if (clusterPoints.length >= 1) {
-        const lats = clusterPoints.map(p => p.geometry.coordinates[1]);
-        const lngs = clusterPoints.map(p => p.geometry.coordinates[0]);
-        // Add a tiny buffer to make sure it's a valid polygon even for 1-2 points
-        const minLat = Math.min(...lats) - 0.0005;
-        const maxLat = Math.max(...lats) + 0.0005;
-        const minLng = Math.min(...lngs) - 0.0005;
-        const maxLng = Math.max(...lngs) + 0.0005;
-        
-        subZonePoly = turf.polygon([[
-          [minLng, minLat],
-          [maxLng, minLat],
-          [maxLng, maxLat],
-          [minLng, maxLat],
-          [minLng, minLat]
-        ]]);
-      } else {
-        // Fallback dummy polygon
-        subZonePoly = turf.polygon([[[0,0], [0,1], [1,1], [1,0], [0,0]]]);
-      }
+    const subZoneId = `sz_${safeName || Date.now()}_single`;
+    const subZoneName = `${mainZoneName} (전체)`;
 
-      // Track bounding points for main zone polygon
-      features.forEach(f => {
-        facilityToSubZoneMap[f.properties.id] = subZoneId;
-        mainPolygonCoords.push(f.geometry.coordinates);
-      });
-
-      subZonesToInsert.push({
-        id: subZoneId,
-        zone_id: mainZoneId,
-        name: subZoneName,
-        polygon: subZonePoly.geometry,
-        final_index: 80, // Mock score for now
-      });
+    let subZonePoly;
+    if (points.features.length >= 1) {
+      const lats = points.features.map(p => p.geometry.coordinates[1]);
+      const lngs = points.features.map(p => p.geometry.coordinates[0]);
+      
+      const minLat = Math.min(...lats) - 0.0005;
+      const maxLat = Math.max(...lats) + 0.0005;
+      const minLng = Math.min(...lngs) - 0.0005;
+      const maxLng = Math.max(...lngs) + 0.0005;
+      
+      subZonePoly = turf.polygon([[
+        [minLng, minLat],
+        [maxLng, minLat],
+        [maxLng, maxLat],
+        [minLng, maxLat],
+        [minLng, minLat]
+      ]]);
+    } else {
+      subZonePoly = turf.polygon([[[0,0], [0,1], [1,1], [1,0], [0,0]]]);
     }
+
+    points.features.forEach(f => {
+      // safely get id from feature properties, fallback to a random id if missing
+      const fId = f.properties?.id || `f_${Date.now()}_${Math.random()}`;
+      facilityToSubZoneMap[fId] = subZoneId;
+      mainPolygonCoords.push(f.geometry.coordinates);
+    });
+
+    subZonesToInsert.push({
+      id: subZoneId,
+      zone_id: mainZoneId,
+      name: subZoneName,
+      polygon: subZonePoly.geometry,
+      final_index: 80, // Mock score
+    });
 
     // Main zone bounding box
     let mainPolyGeoJson = null;
@@ -190,5 +171,21 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Upload Error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Delete all zones, sub_zones, and facilities
+    // Supabase allows deleting with a wide filter
+    await supabase.from('facilities').delete().neq('id', 'dummy');
+    await supabase.from('sub_zones').delete().neq('id', 'dummy');
+    await supabase.from('zones').delete().neq('id', 'dummy');
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Delete Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

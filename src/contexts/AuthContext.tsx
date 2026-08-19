@@ -71,9 +71,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           )}
         </div>
         
-        {/* Admin Excel Upload */}
+        {/* Admin Tools */}
         {role === 'admin' && (
-          <div className="mt-3 border-t border-zinc-200 pt-3 w-full flex flex-col items-center">
+          <div className="mt-3 border-t border-zinc-200 pt-3 w-full flex flex-col items-center gap-2">
             <label className="cursor-pointer bg-zinc-800 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-zinc-900 transition-colors text-center w-full">
               📥 엑셀 데이터 DB 자동 업로드
               <input type="file" accept=".xlsx" className="hidden" onChange={async (e) => {
@@ -86,15 +86,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   const res = await fetch('/api/upload', { method: 'POST', body: formData });
                   if (!res.ok) throw new Error('Upload failed');
                   const result = await res.json();
-                  alert(`업로드 성공! 총 ${result.zonesCount}개의 구역과 ${result.subZonesCount}개의 세부구역이 생성되었습니다. 새로고침을 해주세요.`);
+                  alert(`업로드 성공! 총 ${result.zonesCount || 1}개의 구역과 1개의 전체구역이 생성되었습니다. 새로고침을 해주세요.`);
                 } catch (err) {
                   alert('업로드 중 오류가 발생했습니다.');
                   console.error(err);
                 }
               }} />
             </label>
+            
+            <button
+              onClick={async () => {
+                if(confirm('정말 모든 구역/시설 데이터를 삭제하시겠습니까?')) {
+                  try {
+                    const res = await fetch('/api/upload', { method: 'DELETE' });
+                    if(!res.ok) throw new Error('Delete failed');
+                    alert('전체 데이터가 삭제되었습니다. 새로고침을 해주세요.');
+                  } catch(e) {
+                    alert('삭제 실패!');
+                  }
+                }
+              }}
+              className="bg-red-50 text-red-600 border border-red-200 text-[11px] font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-red-100 transition-colors text-center w-full"
+            >
+              🗑️ 전체 데이터 초기화
+            </button>
             <p className="text-[10px] text-zinc-400 mt-1">
-              내일 현장답사.xlsx 파일을 올려주세요
+              데이터 관리를 위한 관리자 도구입니다.
             </p>
           </div>
         )}
