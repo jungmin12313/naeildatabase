@@ -15,13 +15,16 @@ interface FacilityDetailProps {
 export default function FacilityDetail({ facility, measurements, scores, texts }: FacilityDetailProps) {
   const avgScore = scores.filter(s => s.score !== null).reduce((acc, curr, _, arr) => acc + (curr.score || 0) / arr.length, 0);
 
-  const radarData = scores.map(s => ({
-    id: s.category,
-    subject: s.category.split('_')[1],
-    A: s.score || 0,
-    visualA: (s.score || 0) < 5 ? 5 : (s.score || 0),
-    fullMark: 100
-  }));
+  const radarData = ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].map(cat => {
+    const s = scores.find(score => score.category === cat);
+    return {
+      id: cat,
+      subject: cat.split('_')[1],
+      A: s?.score || 0,
+      visualA: (s?.score || 0) < 5 ? 5 : (s?.score || 0),
+      fullMark: 100
+    };
+  });
 
   const parseDiagnosis = (text: string) => {
     let problem = "-";
