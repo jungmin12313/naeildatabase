@@ -307,9 +307,10 @@ export default function Sidebar({
                                 const subScore = sub.final_index as number | null;
                                 const subColor = getColorForScore(subScore);
                                 return (
-                                  <div
+                                  <button
                                     key={sub.id}
-                                    className="w-full flex items-center justify-between p-2 rounded-lg bg-white border border-zinc-100 text-left pl-6 relative"
+                                    onClick={() => onSelectZone(z.id, sub.id)}
+                                    className="w-full flex items-center justify-between p-2 rounded-lg bg-white border border-zinc-100 text-left pl-6 relative hover:border-blue-400 hover:shadow-sm transition-all"
                                   >
                                     <div className="absolute left-3 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-zinc-300" />
                                     <span className="text-sm text-zinc-700">{sub.name}</span>
@@ -320,7 +321,7 @@ export default function Sidebar({
                                       }}>
                                       {subScore !== null ? subScore.toFixed(1) : '-'}
                                     </span>
-                                  </div>
+                                  </button>
                                 );
                               })}
                             </>
@@ -340,7 +341,7 @@ export default function Sidebar({
                           )}
                           
                           <button 
-                            onClick={() => onSelectZone(z.id)}
+                            onClick={() => onSelectZone(z.id, 'all')}
                             className="w-full flex items-center justify-center text-xs text-blue-600 font-semibold p-2 mt-1 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 bg-white"
                           >
                             {z.name} 전체 상세 데이터 보기 <ChevronRight size={14} className="ml-1" />

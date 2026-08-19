@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as xlsx from 'xlsx';
 import * as turf from '@turf/helpers';
-import clustersKmeans from '@turf/clusters-kmeans';
+import convex from '@turf/convex';
 
 // Initialize Supabase Client with Service Role Key for backend operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -62,12 +62,21 @@ export async function POST(request: NextRequest) {
       let fScore = 0.5 * s_width + 0.5 * s_step_slope;
       if (isNaN(fScore)) fScore = 0;
 
+      // Category mapping to match Sidebar.tsx Radar Chart
+      let rawCategory = r['카테고리'] || '출입구';
+      let mappedCategory = 'S2_출입구';
+      if (rawCategory.includes('보행')) mappedCategory = 'S1_보행로';
+      else if (rawCategory.includes('출입')) mappedCategory = 'S2_출입구';
+      else if (rawCategory.includes('화장실')) mappedCategory = 'S3_화장실';
+      else if (rawCategory.includes('엘리베이터') || rawCategory.includes('승강기')) mappedCategory = 'S4_엘리베이터';
+      else if (rawCategory.includes('주차')) mappedCategory = 'S5_주차장';
+
       return {
         id: r['ID'] ? `f_${r['ID']}` : `f_${Date.now()}_${index}`,
         name: r['장소명'] || `알 수 없는 장소 ${index}`,
         lat,
         lng,
-        category: r['카테고리'] || '일반',
+        category: mappedCategory,
         doorWidth: x1,
         stepHeight: x2,
         incline: x3,
@@ -88,67 +97,41 @@ export async function POST(request: NextRequest) {
     const safeName = mainZoneName.replace(/[^a-zA-Z0-9가-힣]/g, '');
     const mainZoneId = safeName ? `z_${safeName}` : `z_${Date.now()}`;
 
-    // GeoJSON Points for clustering
+    // GeoJSON Points
     const points = turf.featureCollection(
       validFacilities.map(f => turf.point([f.lng, f.lat], { id: f.id }))
     );
 
-    // ---------------------------------------------------------
-    // No more K-Means Clustering! Just one sub-zone for everything
-    // ---------------------------------------------------------
-    const subZonesToInsert = [];
+    // No automatic subzones! Subzones will be drawn by user later.
+    const subZonesToInsert: any[] = [];
     const facilityToSubZoneMap: Record<string, string> = {};
-    const mainPolygonCoords: any[] = [];
+    
+    validFacilities.forEach(f => {
+      // Leave unassigned
+      facilityToSubZoneMap[f.id] = 'unassigned';
+    });
 
-    const subZoneId = `sz_${safeName || Date.now()}_single`;
-    const subZoneName = `${mainZoneName} (전체)`;
-
-    let subZonePoly;
-    if (points.features.length >= 1) {
+    // Main zone polygon using convex hull for a tight wrap
+    let mainPolyGeoJson = null;
+    if (points.features.length >= 3) {
+      try {
+        const hull = convex(points);
+        if (hull) {
+          mainPolyGeoJson = hull.geometry;
+        }
+      } catch (e) {
+        console.error('Convex hull failed', e);
+      }
+    }
+    
+    // Fallback if convex hull fails or < 3 points
+    if (!mainPolyGeoJson && points.features.length >= 1) {
       const lats = points.features.map(p => p.geometry.coordinates[1]);
       const lngs = points.features.map(p => p.geometry.coordinates[0]);
-      
-      const minLat = Math.min(...lats) - 0.0005;
-      const maxLat = Math.max(...lats) + 0.0005;
-      const minLng = Math.min(...lngs) - 0.0005;
-      const maxLng = Math.max(...lngs) + 0.0005;
-      
-      subZonePoly = turf.polygon([[
-        [minLng, minLat],
-        [maxLng, minLat],
-        [maxLng, maxLat],
-        [minLng, maxLat],
-        [minLng, minLat]
-      ]]);
-    } else {
-      subZonePoly = turf.polygon([[[0,0], [0,1], [1,1], [1,0], [0,0]]]);
-    }
-
-    points.features.forEach(f => {
-      // safely get id from feature properties, fallback to a random id if missing
-      const fId = f.properties?.id || `f_${Date.now()}_${Math.random()}`;
-      facilityToSubZoneMap[fId] = subZoneId;
-      mainPolygonCoords.push(f.geometry.coordinates);
-    });
-
-    subZonesToInsert.push({
-      id: subZoneId,
-      zone_id: mainZoneId,
-      name: subZoneName,
-      polygon: subZonePoly.geometry,
-      final_index: avgScore, // Real calculated score
-    });
-
-    // Main zone bounding box
-    let mainPolyGeoJson = null;
-    if (mainPolygonCoords.length >= 1) {
-      const lats = mainPolygonCoords.map(c => c[1]);
-      const lngs = mainPolygonCoords.map(c => c[0]);
-      const minLat = Math.min(...lats) - 0.001;
-      const maxLat = Math.max(...lats) + 0.001;
-      const minLng = Math.min(...lngs) - 0.001;
-      const maxLng = Math.max(...lngs) + 0.001;
-      
+      const minLat = Math.min(...lats) - 0.0002;
+      const maxLat = Math.max(...lats) + 0.0002;
+      const minLng = Math.min(...lngs) - 0.0002;
+      const maxLng = Math.max(...lngs) + 0.0002;
       mainPolyGeoJson = turf.polygon([[
         [minLng, minLat],
         [maxLng, minLat],
