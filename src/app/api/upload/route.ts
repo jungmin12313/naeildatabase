@@ -198,8 +198,7 @@ export async function POST(request: NextRequest) {
       id: `cs_${f.id}`,
       facility_id: f.id,
       category: f.category,
-      score: f.score,
-      status: '계산완료'
+      score: f.score
     }));
     for (let i = 0; i < categoryScoresToInsert.length; i += chunkSize) {
       const chunk = categoryScoresToInsert.slice(i, i + chunkSize);
