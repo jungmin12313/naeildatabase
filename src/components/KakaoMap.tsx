@@ -253,15 +253,19 @@ export default function KakaoMap({
               );
             })}
 
-            {/* Facility Markers (e.g. Unassigned) */}
-            {selectedSubZoneId === 'unassigned' && displayFacilities && displayFacilities.map(f => {
+            {/* Facility Markers */}
+            {displayFacilities && displayFacilities.map(f => {
               if (!f.location) return null;
+              const fColor = getColorForScore(f.score ?? null);
               return (
                 <CustomOverlayMap key={`marker-${f.id}`} position={f.location}>
                   <div className="group relative cursor-pointer">
-                    <div className="w-4 h-4 bg-zinc-600 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform" />
+                    <div 
+                      className="w-4 h-4 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform" 
+                      style={{ backgroundColor: fColor }}
+                    />
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block whitespace-nowrap bg-zinc-800 text-white text-xs px-2 py-1 rounded shadow-lg z-20">
-                      {f.name}
+                      {f.name} ({f.score !== null ? `${f.score.toFixed(1)}점` : '산출보류'})
                     </div>
                   </div>
                 </CustomOverlayMap>

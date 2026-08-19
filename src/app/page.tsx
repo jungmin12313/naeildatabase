@@ -50,8 +50,14 @@ export default function Home() {
           }));
           
           setZonesData(formattedZones);
-          if (dbFacilities) setFacilitiesData(dbFacilities);
           if (dbCategoryScores) setCategoryScoresData(dbCategoryScores);
+          if (dbFacilities) {
+            const formattedFacilities = dbFacilities.map((f: any) => {
+              const fScore = dbCategoryScores?.find((cs: any) => cs.facility_id === f.id)?.score;
+              return { ...f, score: fScore !== undefined ? fScore : null };
+            });
+            setFacilitiesData(formattedFacilities);
+          }
           setMounted(true);
           return; // Exit early since we used Supabase
         }
