@@ -19,7 +19,7 @@ interface SidebarProps {
   onSelectFacility: (id: string) => void;
   onBackToZones: () => void;
   onBackToZone: () => void;
-  onSelectZone: (id: string) => void;
+  onSelectZone: (id: string, subId?: string) => void;
   onUpdateZones?: (zones: MockData['zones']) => void;
   isDrawingMode?: boolean;
   setIsDrawingMode?: (val: boolean) => void;
