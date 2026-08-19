@@ -104,11 +104,11 @@ export async function POST(request: NextRequest) {
 
     // No automatic subzones! Subzones will be drawn by user later.
     const subZonesToInsert: any[] = [];
-    const facilityToSubZoneMap: Record<string, string> = {};
+    const facilityToSubZoneMap: Record<string, string | null> = {};
     
     validFacilities.forEach(f => {
-      // Leave unassigned
-      facilityToSubZoneMap[f.id] = 'unassigned';
+      // Leave unassigned (use null to avoid Foreign Key violations if 'unassigned' is not in sub_zones table)
+      facilityToSubZoneMap[f.id] = null;
     });
 
     // Main zone polygon using convex hull for a tight wrap
@@ -164,8 +164,10 @@ export async function POST(request: NextRequest) {
     if (zErr) throw new Error(`Zone Insert Error: ${zErr.message}`);
 
     // 2. Insert/Upsert SubZones
-    const { error: szErr } = await supabase.from('sub_zones').upsert(subZonesToInsert, { onConflict: 'id' });
-    if (szErr) throw new Error(`SubZone Insert Error: ${szErr.message}`);
+    if (subZonesToInsert.length > 0) {
+      const { error: szErr } = await supabase.from('sub_zones').upsert(subZonesToInsert, { onConflict: 'id' });
+      if (szErr) throw new Error(`SubZone Insert Error: ${szErr.message}`);
+    }
 
     // 3. Insert/Upsert Facilities
     // Break into chunks if too many
