@@ -41,21 +41,37 @@ export async function POST(request: NextRequest) {
       const lat = parseFloat(latStr);
       const lng = parseFloat(lngStr);
       
+      const doorWidth = parseFloat(r['유효폭']) || parseFloat(r['문너비']) || 0;
+      const stepHeight = parseFloat(r['단차']) || 0;
+      const incline = parseFloat(r['기울기']) || 0;
+      
+      // Calculate a basic score out of 100
+      let fScore = 100;
+      if (stepHeight > 0) fScore -= 40;
+      if (doorWidth > 0 && doorWidth < 0.9) fScore -= 30;
+      if (incline > 0.083) fScore -= 30; // 1/12
+      fScore = Math.max(0, fScore);
+      
       return {
         id: r['ID'] ? `f_${r['ID']}` : `f_${Date.now()}_${index}`,
         name: r['장소명'] || `알 수 없는 장소 ${index}`,
         lat,
         lng,
         category: r['카테고리'] || '일반',
-        // Mock scoring logic for now based on Excel columns
-        doorWidth: parseFloat(r['문너비']) || 0,
-        stepHeight: parseFloat(r['단차']) || 0,
+        doorWidth,
+        stepHeight,
+        incline,
+        score: fScore
       };
     }).filter(f => !isNaN(f.lat) && !isNaN(f.lng));
 
     if (validFacilities.length === 0) {
       return NextResponse.json({ error: 'No valid GPS data found in file.' }, { status: 400 });
     }
+
+    const avgScore = validFacilities.length > 0 
+      ? Math.round(validFacilities.reduce((sum, f) => sum + f.score, 0) / validFacilities.length)
+      : 75;
 
     // Main Zone
     const mainZoneName = allRows[0]['프로젝트명'] || '업로드된 무장애지도';
@@ -110,7 +126,7 @@ export async function POST(request: NextRequest) {
       zone_id: mainZoneId,
       name: subZoneName,
       polygon: subZonePoly.geometry,
-      final_index: 80, // Mock score
+      final_index: avgScore, // Real calculated score
     });
 
     // Main zone bounding box
@@ -137,8 +153,8 @@ export async function POST(request: NextRequest) {
       name: mainZoneName,
       level: '대구역',
       polygon: mainPolyGeoJson,
-      final_index: 75, // Mock average score
-      color_grade: 'A'
+      final_index: avgScore, // Real calculated score
+      color_grade: avgScore >= 90 ? 'A' : avgScore >= 70 ? 'B' : 'C'
     };
 
     const facilitiesToInsert = validFacilities.map(f => ({
@@ -165,6 +181,20 @@ export async function POST(request: NextRequest) {
       const chunk = facilitiesToInsert.slice(i, i + chunkSize);
       const { error: fErr } = await supabase.from('facilities').upsert(chunk, { onConflict: 'id' });
       if (fErr) throw new Error(`Facility Insert Error: ${fErr.message}`);
+    }
+
+    // 4. Insert/Upsert Category Scores
+    const categoryScoresToInsert = validFacilities.map(f => ({
+      id: `cs_${f.id}`,
+      facility_id: f.id,
+      category: f.category,
+      score: f.score,
+      status: '계산완료'
+    }));
+    for (let i = 0; i < categoryScoresToInsert.length; i += chunkSize) {
+      const chunk = categoryScoresToInsert.slice(i, i + chunkSize);
+      const { error: csErr } = await supabase.from('category_scores').upsert(chunk, { onConflict: 'id' });
+      if (csErr) console.error(`Category Score Insert Error: ${csErr.message}`); // non-fatal
     }
 
     return NextResponse.json({ success: true, mainZoneId });
