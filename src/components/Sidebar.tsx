@@ -58,6 +58,8 @@ export default function Sidebar({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedZoneId, setExpandedZoneId] = useState<string | null>(null);
   const [editingZoneId, setEditingZoneId] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [searchTerm, setSearchTerm] = useState('');
   const [editForm, setEditForm] = useState<any[]>([]);
   const [reselectingSubZoneId, setReselectingSubZoneId] = useState<string | null>(null);
 
@@ -120,11 +122,24 @@ export default function Sidebar({
                   f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, drawnPolygon)
                 );
                 
+                let totalScore = 0;
+                let facilityCount = 0;
+                facilitiesInPolygon.forEach(f => {
+                  const fScores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+                  if (fScores.length > 0) {
+                    totalScore += fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
+                    facilityCount++;
+                  }
+                });
+                const subzoneTotalAverage = facilityCount > 0 ? totalScore / facilityCount : 0;
+
                 const catAvgs: Record<string, number> = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
                 ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat, index) => {
                   const fScores = data.categoryScores.filter(cs => cs.category === cat && cs.score !== null && facilitiesInPolygon.some(f => f.id === cs.facility_id));
                   if (fScores.length > 0) {
                     catAvgs[`S${index + 1}`] = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
+                  } else {
+                    catAvgs[`S${index + 1}`] = subzoneTotalAverage; // Use subzone average for missing categories
                   }
                 });
 
@@ -434,7 +449,10 @@ export default function Sidebar({
     }
     const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
     return { ...f, avgScore: avg, hasData: scores.length > 0 };
-  }).filter(f => f.hasData).sort((a, b) => b.avgScore - a.avgScore);
+  })
+  .filter(f => f.hasData)
+  .filter(f => searchTerm ? f.name.toLowerCase().includes(searchTerm.toLowerCase()) : true)
+  .sort((a, b) => sortOrder === 'desc' ? b.avgScore - a.avgScore : a.avgScore - b.avgScore);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -594,9 +612,26 @@ export default function Sidebar({
           <>
             {/* Category Ranking List */}
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-zinc-900">{rankingTitle}</h3>
-                <span className="text-sm text-zinc-500">조사된 시설 {ranking.length}곳</span>
+              <div className="flex flex-col mb-4 gap-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-zinc-900">{rankingTitle}</h3>
+                  <span className="text-sm text-zinc-500">조사된 시설 {ranking.length}곳</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <input 
+                    type="text" 
+                    placeholder="시설명 검색..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1 px-3 py-1.5 border border-zinc-200 rounded-lg outline-none focus:border-blue-400"
+                  />
+                  <button 
+                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                    className="px-3 py-1.5 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-100 text-zinc-700 font-medium transition-colors whitespace-nowrap"
+                  >
+                    {sortOrder === 'desc' ? '내림차순 ↓' : '오름차순 ↑'}
+                  </button>
+                </div>
               </div>
               <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2 print:max-h-none print:overflow-visible">
                 {ranking.map((f, i) => {

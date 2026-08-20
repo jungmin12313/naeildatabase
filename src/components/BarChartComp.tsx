@@ -14,6 +14,9 @@ interface BarChartCompProps {
 export default function BarChartComp({ facilities, categoryScores, selectedCategory, onSelectFacility }: BarChartCompProps) {
   if (!facilities || facilities.length === 0) return null;
 
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [searchTerm, setSearchTerm] = useState('');
+
   // Prepare data for the selected category
   const chartData = facilities.map(f => {
     let finalScore = 0;
@@ -39,7 +42,10 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
       score: Math.round(finalScore),
       hasData
     };
-  }).filter(d => d.hasData).sort((a, b) => b.score - a.score); // Sort descending
+  })
+  .filter(d => d.hasData)
+  .filter(d => searchTerm ? d.name.toLowerCase().includes(searchTerm.toLowerCase()) : true)
+  .sort((a, b) => sortOrder === 'desc' ? b.score - a.score : a.score - b.score);
 
   // Identify bottom N (e.g., bottom 3)
   const bottomThreshold = chartData.length > 3 ? chartData[chartData.length - 3].score : 100;
@@ -47,9 +53,26 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
   return (
     <div className="w-full space-y-4">
       <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100">
-        <h4 className="text-sm font-semibold text-zinc-700 mb-4 text-center">
-          {selectedCategory === "ALL" ? "종합 점수 전체 시설 순위 (가로 스크롤)" : `${selectedCategory.split('_')[1]} 전체 시설 순위 (가로 스크롤)`}
-        </h4>
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
+          <h4 className="text-sm font-semibold text-zinc-700 text-center sm:text-left">
+            {selectedCategory === "ALL" ? "종합 접근성 순위" : `${selectedCategory.split('_')[1]} 시설 순위`}
+          </h4>
+          <div className="flex items-center gap-2 text-xs">
+            <input 
+              type="text" 
+              placeholder="시설명 검색..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-2 py-1 border border-zinc-200 rounded-md outline-none focus:border-blue-400"
+            />
+            <button 
+              onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+              className="px-2 py-1 bg-white border border-zinc-200 rounded-md hover:bg-zinc-100 text-zinc-600 transition-colors"
+            >
+              {sortOrder === 'desc' ? '내림차순 ↓' : '오름차순 ↑'}
+            </button>
+          </div>
+        </div>
         <div className="w-full overflow-x-auto overflow-y-hidden pb-2 custom-scrollbar">
           <div style={{ minWidth: '100%', width: Math.max(100, chartData.length * 35) }} className="h-64">
             <ResponsiveContainer width="100%" height="100%">

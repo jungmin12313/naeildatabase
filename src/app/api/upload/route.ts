@@ -107,7 +107,8 @@ export async function POST(request: NextRequest) {
         doorWidth: x1,
         stepHeight: x2,
         incline: x3,
-        score: fScore
+        score: fScore,
+        raw_data: r
       };
     }).filter(f => !isNaN(f.lat) && !isNaN(f.lng));
 
@@ -116,12 +117,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate Category Averages
+    const zoneTotalAverage = validFacilities.reduce((sum, f) => sum + f.score, 0) / validFacilities.length;
     const catAvgs: Record<string, number> = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
     ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat, index) => {
       const facilitiesInCat = validFacilities.filter(f => f.category === cat);
       catAvgs[`S${index + 1}`] = facilitiesInCat.length > 0
         ? facilitiesInCat.reduce((sum, f) => sum + f.score, 0) / facilitiesInCat.length
-        : 0;
+        : zoneTotalAverage; // Use zone average for missing categories to avoid crippling the area
     });
 
     const finalIndexRaw = (
@@ -198,7 +200,8 @@ export async function POST(request: NextRequest) {
       sub_zone_id: facilityToSubZoneMap[f.id],
       name: f.name,
       category: f.category,
-      location: { lat: f.lat, lng: f.lng }
+      location: { lat: f.lat, lng: f.lng },
+      image_url: f.raw_data['사진'] || null
     }));
 
     // 1. Insert/Upsert Zone
@@ -212,7 +215,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Insert/Upsert Facilities
-    // Break into chunks if too many
     const chunkSize = 100;
     for (let i = 0; i < facilitiesToInsert.length; i += chunkSize) {
       const chunk = facilitiesToInsert.slice(i, i + chunkSize);
@@ -221,12 +223,25 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Insert/Upsert Category Scores
-    const categoryScoresToInsert = validFacilities.map(f => ({
-      id: `cs_${f.id}`,
-      facility_id: f.id,
-      category: f.category,
-      score: f.score
-    }));
+    const categoryScoresToInsert = validFacilities.map(f => {
+      const r = f.raw_data;
+      const metrics = {
+        유효폭: r['유효폭'] || r['문너비'] || r['문 너비'] || '',
+        가로너비: r['가로 너비'] || r['가로너비'] || '',
+        세로너비: r['세로 너비'] || r['세로너비'] || '',
+        단차: r['단차'] || '',
+        기울기: r['기울기'] || '',
+        비고: r['기타 특이사항'] || r['비고'] || r['기타사항'] || ''
+      };
+      
+      return {
+        id: `cs_${f.id}`,
+        facility_id: f.id,
+        category: f.category,
+        score: f.score,
+        reason: JSON.stringify(metrics) // Store raw data here for the frontend to display
+      };
+    });
     for (let i = 0; i < categoryScoresToInsert.length; i += chunkSize) {
       const chunk = categoryScoresToInsert.slice(i, i + chunkSize);
       const { error: csErr } = await supabase.from('category_scores').upsert(chunk, { onConflict: 'id' });
