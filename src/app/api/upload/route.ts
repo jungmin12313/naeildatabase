@@ -41,28 +41,19 @@ export async function POST(request: NextRequest) {
       const lat = parseFloat(latStr);
       const lng = parseFloat(lngStr);
 
-      let x1 = parseFloat(r['유효폭']) || parseFloat(r['문너비']) || 0;
+      let x1 = parseFloat(r['유효폭']) || parseFloat(r['문너비']) || parseFloat(r['문 너비']) || 0;
       if (x1 > 0 && x1 < 10) x1 *= 100; // convert meters to cm if needed
+      
+      let x_h = parseFloat(r['가로 너비']) || parseFloat(r['가로너비']) || 0;
+      if (x_h > 0 && x_h < 10) x_h *= 100;
+      
+      let x_v = parseFloat(r['세로 너비']) || parseFloat(r['세로너비']) || 0;
+      if (x_v > 0 && x_v < 10) x_v *= 100;
       
       const x2 = parseFloat(r['단차']) || 0;
       const x3 = parseFloat(r['기울기']) || 0;
       
-      // 출입구(S2) 산출 공식 적용
-      const s_width = Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100));
-      const s_step = Math.min(100, Math.max(0, ((6 - x2) / (6 - 2)) * 100));
-      const s_slope = Math.min(100, Math.max(0, ((14.4 - x3) / (14.4 - 4.8)) * 100));
-      
-      let s_step_slope;
-      if (x2 <= 2) {
-        s_step_slope = 100;
-      } else {
-        s_step_slope = 0.5 * s_step + 0.5 * s_slope;
-      }
-      
-      let fScore = 0.5 * s_width + 0.5 * s_step_slope;
-      if (isNaN(fScore)) fScore = 0;
-
-      // Category mapping to match Sidebar.tsx Radar Chart
+      // 카테고리 매핑
       let rawCategory = r['카테고리'] || '출입구';
       let mappedCategory = 'S2_출입구';
       if (rawCategory.includes('보행')) mappedCategory = 'S1_보행로';
@@ -70,6 +61,42 @@ export async function POST(request: NextRequest) {
       else if (rawCategory.includes('화장실')) mappedCategory = 'S3_화장실';
       else if (rawCategory.includes('엘리베이터') || rawCategory.includes('승강기')) mappedCategory = 'S4_엘리베이터';
       else if (rawCategory.includes('주차')) mappedCategory = 'S5_주차장';
+      
+      // 공통 수식 (단차, 기울기)
+      const s_step = Math.min(100, Math.max(0, ((6 - x2) / (6 - 2)) * 100));
+      const s_slope = Math.min(100, Math.max(0, ((14.4 - x3) / (14.4 - 4.8)) * 100));
+      const s_step_slope = x2 <= 2 ? 100 : (0.5 * s_step + 0.5 * s_slope);
+
+      let fScore = 0;
+
+      // PDF 수식 적용
+      if (mappedCategory === 'S1_보행로') {
+        const s1 = Math.min(100, Math.max(0, ((x1 - 40) / (120 - 40)) * 100));
+        fScore = (1/3) * s1 + (1/3) * s_step + (1/3) * s_slope;
+      } 
+      else if (mappedCategory === 'S2_출입구') {
+        const s_width = Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100));
+        fScore = 0.5 * s_width + 0.5 * s_step_slope;
+      }
+      else if (mappedCategory === 'S3_화장실') {
+        const s_width_h = Math.min(100, Math.max(0, ((x_h - 140/3) / (140 - 140/3)) * 100));
+        const s_width_v = Math.min(100, Math.max(0, ((x_v - 140/3) / (140 - 140/3)) * 100));
+        const s_door = Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100));
+        fScore = 0.25 * s_width_h + 0.25 * s_width_v + 0.25 * s_door + 0.25 * s_step_slope;
+      }
+      else if (mappedCategory === 'S4_엘리베이터') {
+        const s_width_h = Math.min(100, Math.max(0, ((x_h - 160/3) / (160 - 160/3)) * 100));
+        const s_width_v = Math.min(100, Math.max(0, ((x_v - 45) / (135 - 45)) * 100));
+        const s_door = Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100));
+        fScore = 0.25 * s_width_h + 0.25 * s_width_v + 0.25 * s_door + 0.25 * s_step_slope;
+      }
+      else if (mappedCategory === 'S5_주차장') {
+        const s_width_h = Math.min(100, Math.max(0, ((x_h - 110) / (330 - 110)) * 100));
+        const s_width_v = Math.min(100, Math.max(0, ((x_v - 500/3) / (500 - 500/3)) * 100));
+        fScore = 0.5 * s_width_h + 0.5 * s_width_v;
+      }
+
+      if (isNaN(fScore)) fScore = 0;
 
       return {
         id: r['ID'] ? `f_${r['ID']}` : `f_${Date.now()}_${index}`,
@@ -88,9 +115,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid GPS data found in file.' }, { status: 400 });
     }
 
-    const avgScore = validFacilities.length > 0 
-      ? Math.round(validFacilities.reduce((sum, f) => sum + f.score, 0) / validFacilities.length)
-      : 75;
+    // Calculate Category Averages
+    const catAvgs: Record<string, number> = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
+    ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat, index) => {
+      const facilitiesInCat = validFacilities.filter(f => f.category === cat);
+      catAvgs[`S${index + 1}`] = facilitiesInCat.length > 0
+        ? facilitiesInCat.reduce((sum, f) => sum + f.score, 0) / facilitiesInCat.length
+        : 0;
+    });
+
+    const finalIndexRaw = (
+      catAvgs.S1 * catAvgs.S2 +
+      catAvgs.S2 * catAvgs.S3 +
+      catAvgs.S3 * catAvgs.S4 +
+      catAvgs.S4 * catAvgs.S5 +
+      catAvgs.S5 * catAvgs.S1
+    ) / 500;
+    
+    const avgScore = Math.round(finalIndexRaw);
 
     // Main Zone
     const mainZoneName = allRows[0]['프로젝트명'] || '업로드된 무장애지도';

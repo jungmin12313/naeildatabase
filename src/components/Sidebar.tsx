@@ -120,19 +120,23 @@ export default function Sidebar({
                   f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, drawnPolygon)
                 );
                 
-                let totalFacilityScore = 0;
-                let validFacilityCount = 0;
-                
-                facilitiesInPolygon.forEach(f => {
-                  const fScores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+                const catAvgs: Record<string, number> = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
+                ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat, index) => {
+                  const fScores = data.categoryScores.filter(cs => cs.category === cat && cs.score !== null && facilitiesInPolygon.some(f => f.id === cs.facility_id));
                   if (fScores.length > 0) {
-                    const fAvg = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
-                    totalFacilityScore += fAvg;
-                    validFacilityCount++;
+                    catAvgs[`S${index + 1}`] = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
                   }
                 });
+
+                const finalIndexRaw = facilitiesInPolygon.length > 0 ? (
+                  catAvgs.S1 * catAvgs.S2 +
+                  catAvgs.S2 * catAvgs.S3 +
+                  catAvgs.S3 * catAvgs.S4 +
+                  catAvgs.S4 * catAvgs.S5 +
+                  catAvgs.S5 * catAvgs.S1
+                ) / 500 : null;
                 
-                const avgScore = validFacilityCount > 0 ? (totalFacilityScore / validFacilityCount) : null;
+                const avgScore = finalIndexRaw !== null ? Math.round(finalIndexRaw) : null;
 
                 const newSub = {
                   id: 'sub_' + Date.now(),
