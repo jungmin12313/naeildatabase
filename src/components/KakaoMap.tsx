@@ -194,7 +194,7 @@ export default function KakaoMap({
               onClick={() => onSelectZone(zone.id)}
             />
             {!selectedZoneId && (
-              <CustomOverlayMap position={{ lat: centerLat, lng: centerLng }}>
+              <CustomOverlayMap position={{ lat: centerLat, lng: centerLng }} zIndex={10}>
                 <div 
                   className={`px-3 py-1.5 rounded-lg shadow-sm border font-medium text-sm whitespace-nowrap cursor-pointer transition-all flex items-center
                     ${isSelected ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-105' : 'bg-white text-zinc-800 border-zinc-200 hover:border-zinc-400'}`}
@@ -239,7 +239,7 @@ export default function KakaoMap({
                     onClick={() => onSelectSubZone && onSelectSubZone(sub.id)}
                   />
                   {!isReselecting && (
-                    <CustomOverlayMap position={{ lat: subCenterLat, lng: subCenterLng }}>
+                    <CustomOverlayMap position={{ lat: subCenterLat, lng: subCenterLng }} zIndex={10}>
                       <div 
                         className={`px-2 py-1 backdrop-blur-sm rounded-md shadow border text-xs font-bold flex flex-col items-center cursor-pointer transition-transform ${isSubSelected ? 'bg-red-50 text-red-700 border-red-500 scale-110 z-10' : 'bg-white/90 text-zinc-800 border-zinc-200 hover:scale-105'}`}
                         onClick={() => onSelectSubZone && onSelectSubZone(sub.id)}
