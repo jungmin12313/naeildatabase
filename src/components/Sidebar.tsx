@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { ChevronRight, ArrowLeft, MapPin, Printer } from 'lucide-react';
 
 const CategoryDetailCharts = dynamic(() => import('./CategoryDetailCharts'), { ssr: false });
+const CategorySpecificChart = dynamic(() => import('./CategorySpecificChart'), { ssr: false });
 import { getColorForGrade, getColorForScore } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { isPointInPolygon } from '@/utils/geo';
@@ -626,15 +627,30 @@ export default function Sidebar({
               </div>
             </section>
 
-            {/* Specific Category Charts (Pass/Fail metrics & Ranking) */}
-            <section className="animate-in fade-in slide-in-from-bottom-8 duration-500 mt-8">
-              <CategoryDetailCharts
-                facilities={displayFacilities}
-                categoryScores={data.categoryScores}
-                measurements={data.measurements}
-                selectedCategory={selectedCategory}
-                onSelectFacility={onSelectFacility}
+            {/* Specific Category Charts (Custom Visualization) */}
+            <section className="animate-in fade-in slide-in-from-bottom-8 duration-500 mt-8 print:hidden">
+              <CategorySpecificChart
+                category={selectedCategory}
+                data={ranking}
               />
+            </section>
+            
+            {/* Print-only: All Category Specific Charts */}
+            <section className="hidden print:block mt-8 space-y-8 page-break-before-always">
+              <h3 className="text-2xl font-bold text-zinc-900 mb-6 text-center border-b-2 pb-2">카테고리별 맞춤형 시각화 리포트</h3>
+              {['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].map(cat => {
+                const catRanking = displayFacilities.map(f => {
+                  const scores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.category === cat && cs.score !== null);
+                  const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
+                  return { ...f, avgScore: avg, hasData: scores.length > 0 };
+                }).filter(f => f.hasData).sort((a, b) => b.avgScore - a.avgScore);
+
+                return catRanking.length > 0 ? (
+                  <div key={cat} className="page-break-inside-avoid">
+                    <CategorySpecificChart category={cat} data={catRanking} />
+                  </div>
+                ) : null;
+              })}
             </section>
           </>
         ) : (
