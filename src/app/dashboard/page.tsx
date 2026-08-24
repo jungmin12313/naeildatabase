@@ -47,7 +47,7 @@ export default function Dashboard() {
     ? facilityScores.reduce((sum, f) => sum + f.avgScore, 0) / facilityScores.length
     : 0;
 
-  const bottomFacilities = [...facilityScores].sort((a, b) => a.avgScore - b.avgScore).slice(0, 5);
+  const bottomFacilities = [...facilityScores].sort((a, b) => a.avgScore !== b.avgScore ? a.avgScore - b.avgScore : a.name.localeCompare(b.name)).slice(0, 5);
 
   // Re-diagnosis targets (last_survey_date > 6 months)
   const sixMonthsAgo = new Date();
@@ -203,8 +203,9 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Bottom 5 Facilities */}
           <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-zinc-100">
-              <h3 className="text-lg font-bold text-zinc-900">우선 개선 필요 시설 (하위 5곳)</h3>
+            <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-zinc-900">우선 개선 필요 시설</h3>
+              <span className="text-xs text-zinc-500 font-medium">하위 5곳 (동점 시 가나다순)</span>
             </div>
             <div className="divide-y divide-zinc-100">
               {bottomFacilities.map((f, i) => (
@@ -256,7 +257,14 @@ export default function Dashboard() {
 
         {/* Print-only Table Summary of all facilities */}
         <div className="hidden print:block mt-8 page-break-avoid">
-          <h3 className="text-lg font-bold text-zinc-900 mb-4 border-b border-zinc-900 pb-2">전체 시설 현황 및 카테고리별 요약</h3>
+          <div className="border-b-2 border-zinc-900 pb-2 mb-4 flex items-end justify-between">
+            <h3 className="text-lg font-bold text-zinc-900">전체 시설 현황 및 카테고리별 요약</h3>
+            <div className="flex space-x-3 text-xs font-medium pb-1">
+              <div className="flex items-center"><span className="w-2.5 h-2.5 bg-blue-600 rounded-full mr-1.5"></span>우수 (80점 이상)</div>
+              <div className="flex items-center"><span className="w-2.5 h-2.5 bg-orange-500 rounded-full mr-1.5"></span>보통 (50~79점)</div>
+              <div className="flex items-center"><span className="w-2.5 h-2.5 bg-red-600 rounded-full mr-1.5"></span>미흡 (50점 미만)</div>
+            </div>
+          </div>
           <table className="w-full text-left border-collapse text-[11px]">
             <thead>
               <tr className="border-b-2 border-zinc-800 bg-zinc-50">
@@ -278,17 +286,24 @@ export default function Dashboard() {
                 const s3 = fScores.find(s => s.category === 'S3_화장실')?.score;
                 const s4 = fScores.find(s => s.category === 'S4_엘리베이터')?.score;
                 const s5 = fScores.find(s => s.category === 'S5_주차장')?.score;
+
+                const getColor = (score: number | null | undefined) => {
+                  if (score === null || score === undefined) return 'text-zinc-400';
+                  if (score >= 80) return 'text-blue-600';
+                  if (score >= 50) return 'text-orange-500';
+                  return 'text-red-600';
+                };
                 
                 return (
                   <tr key={f.id} className="border-b border-zinc-200">
                     <td className="py-2 px-2 font-semibold truncate max-w-[140px]">{f.name}</td>
                     <td className="py-2 px-2 text-zinc-600">{f.facility_type}</td>
-                    <td className="py-2 px-2 text-center">{s1 !== undefined && s1 !== null ? s1.toFixed(0) : '-'}</td>
-                    <td className="py-2 px-2 text-center">{s2 !== undefined && s2 !== null ? s2.toFixed(0) : '-'}</td>
-                    <td className="py-2 px-2 text-center">{s3 !== undefined && s3 !== null ? s3.toFixed(0) : '-'}</td>
-                    <td className="py-2 px-2 text-center">{s4 !== undefined && s4 !== null ? s4.toFixed(0) : '-'}</td>
-                    <td className="py-2 px-2 text-center">{s5 !== undefined && s5 !== null ? s5.toFixed(0) : '-'}</td>
-                    <td className="py-2 px-2 text-right font-bold text-blue-600">{f.avgScore.toFixed(1)}</td>
+                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s1)}`}>{s1 !== undefined && s1 !== null ? s1.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s2)}`}>{s2 !== undefined && s2 !== null ? s2.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s3)}`}>{s3 !== undefined && s3 !== null ? s3.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s4)}`}>{s4 !== undefined && s4 !== null ? s4.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s5)}`}>{s5 !== undefined && s5 !== null ? s5.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-right font-black ${getColor(f.avgScore)}`}>{f.avgScore.toFixed(1)}</td>
                   </tr>
                 );
               })}
