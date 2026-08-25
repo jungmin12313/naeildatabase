@@ -194,15 +194,19 @@ export async function POST(request: NextRequest) {
       color_grade: avgScore >= 90 ? 'A' : avgScore >= 70 ? 'B' : 'C'
     };
 
-    const facilitiesToInsert = validFacilities.map(f => ({
-      id: f.id,
-      zone_id: mainZoneId,
-      sub_zone_id: facilityToSubZoneMap[f.id],
-      name: f.name,
-      category: f.category,
-      location: { lat: f.lat, lng: f.lng },
-      image_url: f.raw_data['사진'] || null
-    }));
+    const facilitiesToInsert = validFacilities.map(f => {
+      const rawPhoto = f.raw_data['사진'] || '';
+      const photoUrl = rawPhoto ? (rawPhoto.startsWith('/') ? rawPhoto : `/${rawPhoto}`) : null;
+      return {
+        id: f.id,
+        zone_id: mainZoneId,
+        sub_zone_id: facilityToSubZoneMap[f.id],
+        name: f.name,
+        category: f.category,
+        location: { lat: f.lat, lng: f.lng },
+        image_url: photoUrl
+      };
+    });
 
     // 1. Insert/Upsert Zone
     const { error: zErr } = await supabase.from('zones').upsert([zoneToInsert], { onConflict: 'id' });

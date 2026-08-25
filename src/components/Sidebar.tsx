@@ -390,13 +390,15 @@ export default function Sidebar({
             <ArrowLeft size={16} className="mr-1" />
             구역 정보로 돌아가기
           </button>
-          <button 
-            onClick={() => window.print()}
-            className="flex items-center px-3 py-1.5 bg-zinc-800 hover:bg-zinc-900 text-white text-xs font-semibold rounded-lg transition-colors"
-          >
-            <Printer size={14} className="mr-1.5" />
-            PDF 보고서 인쇄
-          </button>
+          {(role === 'admin' || role === 'official') && (
+            <button 
+              onClick={() => window.print()}
+              className="flex items-center px-3 py-1.5 bg-zinc-800 hover:bg-zinc-900 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              <Printer size={14} className="mr-1.5" />
+              PDF 보고서 인쇄
+            </button>
+          )}
         </div>
         <FacilityDetail 
           facility={selectedFacility} 
@@ -468,13 +470,15 @@ export default function Sidebar({
             <ArrowLeft size={16} className="mr-1" />
             {selectedCategory ? '전체 카테고리로 돌아가기' : '지도 초기화'}
           </button>
-          <button 
-            onClick={() => window.print()}
-            className="flex items-center px-3 py-1.5 bg-zinc-800 hover:bg-zinc-900 text-white text-xs font-semibold rounded-lg transition-colors"
-          >
-            <Printer size={14} className="mr-1.5" />
-            PDF 보고서 인쇄
-          </button>
+          {(role === 'admin' || role === 'official') && (
+            <button 
+              onClick={() => window.print()}
+              className="flex items-center px-3 py-1.5 bg-zinc-800 hover:bg-zinc-900 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              <Printer size={14} className="mr-1.5" />
+              PDF 보고서 인쇄
+            </button>
+          )}
         </div>
         
         {/* Print-only Report Title */}

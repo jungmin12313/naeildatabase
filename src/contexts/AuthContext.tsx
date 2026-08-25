@@ -71,8 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           )}
         </div>
         
-        {/* Admin Tools */}
-        {role === 'admin' && (
+        {/* Admin/Official Tools */}
+        {(role === 'admin' || role === 'official') && (
           <div className="mt-3 border-t border-zinc-200 pt-3 w-full flex flex-col items-center gap-2">
             <label className="cursor-pointer bg-zinc-800 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-zinc-900 transition-colors text-center w-full">
               📥 엑셀 데이터 DB 자동 업로드
@@ -94,24 +94,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }} />
             </label>
             
-            <button
-              onClick={async () => {
-                if(confirm('정말 모든 구역/시설 데이터를 삭제하시겠습니까?')) {
-                  try {
-                    const res = await fetch('/api/upload', { method: 'DELETE' });
-                    if(!res.ok) throw new Error('Delete failed');
-                    alert('전체 데이터가 삭제되었습니다. 새로고침을 해주세요.');
-                  } catch(e) {
-                    alert('삭제 실패!');
+            {role === 'admin' && (
+              <button
+                onClick={async () => {
+                  if(confirm('정말 모든 구역/시설 데이터를 삭제하시겠습니까?')) {
+                    try {
+                      const res = await fetch('/api/upload', { method: 'DELETE' });
+                      if(!res.ok) throw new Error('Delete failed');
+                      alert('전체 데이터가 삭제되었습니다. 새로고침을 해주세요.');
+                    } catch(e) {
+                      alert('삭제 실패!');
+                    }
                   }
-                }
-              }}
-              className="bg-red-50 text-red-600 border border-red-200 text-[11px] font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-red-100 transition-colors text-center w-full"
-            >
-              🗑️ 전체 데이터 초기화
-            </button>
+                }}
+                className="bg-red-50 text-red-600 border border-red-200 text-[11px] font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-red-100 transition-colors text-center w-full"
+              >
+                🗑️ 전체 데이터 초기화
+              </button>
+            )}
             <p className="text-[10px] text-zinc-400 mt-1">
-              데이터 관리를 위한 관리자 도구입니다.
+              데이터 관리를 위한 도구입니다.
             </p>
           </div>
         )}
