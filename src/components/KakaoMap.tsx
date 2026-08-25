@@ -260,7 +260,7 @@ export default function KakaoMap({
               if (!f.location) return null;
               const fColor = getColorForScore(f.score ?? null);
               return (
-                <CustomOverlayMap key={`marker-${f.id}`} position={f.location}>
+                <CustomOverlayMap key={`marker-${f.id}`} position={f.location} clickable={true}>
                   <div className="group relative cursor-pointer">
                     <div 
                       className="w-4 h-4 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform" 
