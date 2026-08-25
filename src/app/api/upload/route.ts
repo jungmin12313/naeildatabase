@@ -41,7 +41,14 @@ export async function POST(request: NextRequest) {
       const lat = parseFloat(latStr);
       const lng = parseFloat(lngStr);
 
+      const name = r['장소명'] || '';
       let x1 = parseFloat(r['유효폭']) || parseFloat(r['문너비']) || parseFloat(r['문 너비']) || 0;
+      
+      // 이상치 정정
+      if (name.includes('한라맥주') && x1 > 90) x1 = 0.98;
+      else if (name.includes('숨바꼭질') && x1 > 8) x1 = 0.83;
+      else if (name.includes('세븐일레븐') && x1 > 8) x1 = 0.81;
+
       if (x1 > 0 && x1 < 10) x1 *= 100; // convert meters to cm if needed
       
       let x_h = parseFloat(r['가로 너비']) || parseFloat(r['가로너비']) || 0;
@@ -51,7 +58,9 @@ export async function POST(request: NextRequest) {
       if (x_v > 0 && x_v < 10) x_v *= 100;
       
       const x2 = parseFloat(r['단차']) || 0;
-      const x3 = parseFloat(r['기울기']) || 0;
+      // 기울기 값이 비어있거나 0인지 확인하기 위해 원본 값 보존
+      const rawIncline = r['기울기'];
+      const x3 = parseFloat(rawIncline) || 0;
       
       // 카테고리 매핑
       let rawCategory = r['카테고리'] || '출입구';
@@ -64,7 +73,19 @@ export async function POST(request: NextRequest) {
       
       // 공통 수식 (단차, 기울기)
       const s_step = Math.min(100, Math.max(0, ((6 - x2) / (6 - 2)) * 100));
-      const s_slope = Math.min(100, Math.max(0, ((14.4 - x3) / (14.4 - 4.8)) * 100));
+      
+      // 기울기 점수 (단차가 2cm를 초과하는데 기울기 데이터가 없거나 0이면 위험요소이므로 0점 처리)
+      let s_slope = 0;
+      if (x2 <= 2) {
+        s_slope = 100; // 단차가 2cm 이하 평탄하면 기울기 무관 만점
+      } else {
+        if (rawIncline === undefined || rawIncline === null || rawIncline === '' || x3 === 0) {
+          s_slope = 0; // 결측이거나 0인 경우 0점 (보수적 처리)
+        } else {
+          s_slope = Math.min(100, Math.max(0, ((14.4 - x3) / (14.4 - 4.8)) * 100));
+        }
+      }
+      
       const s_step_slope = x2 <= 2 ? 100 : (0.5 * s_step + 0.5 * s_slope);
 
       let fScore = 0;
