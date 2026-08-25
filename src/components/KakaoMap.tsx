@@ -30,6 +30,7 @@ interface KakaoMapProps {
   onSelectSubZone?: (id: string) => void;
   reselectingSubZoneId?: string | null;
   displayFacilities?: any[];
+  onSelectFacility?: (id: string) => void;
 }
 
 export default function KakaoMap({ 
@@ -43,7 +44,8 @@ export default function KakaoMap({
   selectedSubZoneId,
   onSelectSubZone,
   reselectingSubZoneId,
-  displayFacilities
+  displayFacilities,
+  onSelectFacility
 }: KakaoMapProps) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [kakaoError, setKakaoError] = useState(false);
@@ -263,6 +265,10 @@ export default function KakaoMap({
                     <div 
                       className="w-4 h-4 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2 group-hover:scale-125 transition-transform" 
                       style={{ backgroundColor: fColor }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onSelectFacility) onSelectFacility(f.id);
+                      }}
                     />
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block whitespace-nowrap bg-zinc-800 text-white text-xs px-2 py-1 rounded shadow-lg z-20">
                       {f.name} ({f.score !== null ? `${f.score.toFixed(1)}점` : '산출보류'})

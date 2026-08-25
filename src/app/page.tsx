@@ -162,6 +162,7 @@ export default function Home() {
           drawingTargetZoneId={drawingTargetZoneId}
           reselectingSubZoneId={reselectingSubZoneId}
           displayFacilities={displayFacilities}
+          onSelectFacility={setSelectedFacilityId}
         />
         {/* Top Header Overlay */}
         <div className="absolute top-4 left-4 z-10 pointer-events-none">
