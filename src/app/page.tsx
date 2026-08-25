@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import KakaoMap from '@/components/KakaoMap';
 import Sidebar from '@/components/Sidebar';
 import mockDataRaw from '@/data/mock.json';
+import FacilityDetail from '@/components/FacilityDetail';
+import { X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { isPointInPolygon } from '@/utils/geo';
 
@@ -140,6 +142,26 @@ export default function Home() {
 
   return (
     <main className="flex h-screen w-full overflow-hidden bg-zinc-50 print:block print:h-auto print:overflow-visible">
+      {/* Left Sidebar for Facility Details */}
+      {selectedFacility && (
+        <div className="w-[440px] h-full bg-white border-r border-zinc-200 shadow-xl z-20 flex flex-col relative animate-in slide-in-from-left print:hidden">
+          <div className="absolute top-4 right-4 z-30">
+            <button 
+              onClick={() => setSelectedFacilityId(null)}
+              className="p-2 bg-white rounded-full shadow-md border border-zinc-200 text-zinc-500 hover:text-zinc-900 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <FacilityDetail 
+            facility={selectedFacility} 
+            measurements={mockData.measurements.filter(m => m.facility_id === selectedFacility.id)}
+            scores={mockData.categoryScores.filter(s => s.facility_id === selectedFacility.id)}
+            texts={mockData.diagnosisTexts.filter(t => t.facility_id === selectedFacility.id)}
+          />
+        </div>
+      )}
+
       <div className="flex-1 relative h-full print:hidden">
         <KakaoMap 
           zones={mockData.zones}

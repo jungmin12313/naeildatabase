@@ -379,36 +379,8 @@ export default function Sidebar({
     );
   }
 
-  if (selectedFacility) {
-    return (
-      <div className="flex flex-col h-full print:block print:h-auto">
-        <div className="p-4 border-b border-zinc-200 bg-white sticky top-0 z-10 print:hidden flex justify-between items-center">
-          <button 
-            onClick={onBackToZone}
-            className="flex items-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
-          >
-            <ArrowLeft size={16} className="mr-1" />
-            구역 정보로 돌아가기
-          </button>
-          {(role === 'admin' || role === 'official') && (
-            <button 
-              onClick={() => window.print()}
-              className="flex items-center px-3 py-1.5 bg-zinc-800 hover:bg-zinc-900 text-white text-xs font-semibold rounded-lg transition-colors"
-            >
-              <Printer size={14} className="mr-1.5" />
-              PDF 보고서 인쇄
-            </button>
-          )}
-        </div>
-        <FacilityDetail 
-          facility={selectedFacility} 
-          measurements={data.measurements.filter(m => m.facility_id === selectedFacility.id)}
-          scores={data.categoryScores.filter(s => s.facility_id === selectedFacility.id)}
-          texts={data.diagnosisTexts.filter(t => t.facility_id === selectedFacility.id)}
-        />
-      </div>
-    );
-  }
+  // Remove selectedFacility view from the right sidebar completely, as it will be shown on the left now.
+  // We just proceed to render the Zone Selected View or Zones List View.
 
   // Zone Selected View (F2 & F4 concepts)
   // @ts-ignore
@@ -645,7 +617,8 @@ export default function Sidebar({
                       key={f.id}
                       onClick={() => onSelectFacility(f.id)}
                       className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all hover:shadow-md
-                        ${isBottom ? 'bg-red-50/50 border-red-100 hover:border-red-300' : 'bg-white border-zinc-200 hover:border-blue-300'}`}
+                        ${selectedFacility?.id === f.id ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500 ring-opacity-20' : 
+                        isBottom ? 'bg-red-50/50 border-red-100 hover:border-red-300' : 'bg-white border-zinc-200 hover:border-blue-300'}`}
                     >
                       <div className="flex items-center">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 

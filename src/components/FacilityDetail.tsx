@@ -83,9 +83,9 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
             <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">현장 사진</h4>
             <div className="w-full relative rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50 flex items-center justify-center min-h-[200px]">
               {/* @ts-ignore */}
-              {facility.image_url.startsWith('http') ? (
+              {(facility.image_url.startsWith('http') || facility.image_url.startsWith('/')) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={facility.image_url} alt="현장 사진" className="object-cover max-h-96" />
+                <img src={facility.image_url} alt="현장 사진" className="w-full h-auto object-cover max-h-96 rounded-lg" />
               ) : (
                 <div className="flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
                   <ImageIcon size={32} className="mb-2 opacity-50" />
