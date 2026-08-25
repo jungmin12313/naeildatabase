@@ -137,14 +137,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid GPS data found in file.' }, { status: 400 });
     }
 
-    // Calculate Category Averages
-    const zoneTotalAverage = validFacilities.reduce((sum, f) => sum + f.score, 0) / validFacilities.length;
+    // Calculate Global Category Means (for subzones later, or main zone if missing)
+    const globalCatMeans: Record<string, number> = {};
+    ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat) => {
+      const allInCat = validFacilities.filter(f => f.category === cat);
+      globalCatMeans[cat] = allInCat.length > 0 
+        ? allInCat.reduce((sum, f) => sum + f.score, 0) / allInCat.length 
+        : 50.0; // 데이터 전무할 경우 중간값 50.0 가정
+    });
+
     const catAvgs: Record<string, number> = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
     ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat, index) => {
       const facilitiesInCat = validFacilities.filter(f => f.category === cat);
       catAvgs[`S${index + 1}`] = facilitiesInCat.length > 0
         ? facilitiesInCat.reduce((sum, f) => sum + f.score, 0) / facilitiesInCat.length
-        : zoneTotalAverage; // Use zone average for missing categories to avoid crippling the area
+        : globalCatMeans[cat]; // 누락 시 해당 카테고리의 전체 평균(또는 50.0) 대입
     });
 
     const finalIndexRaw = (

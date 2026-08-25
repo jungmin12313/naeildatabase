@@ -122,16 +122,14 @@ export default function Sidebar({
                   f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, drawnPolygon)
                 );
                 
-                let totalScore = 0;
-                let facilityCount = 0;
-                facilitiesInPolygon.forEach(f => {
-                  const fScores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
-                  if (fScores.length > 0) {
-                    totalScore += fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
-                    facilityCount++;
-                  }
+                // Calculate Global Category Means from all data
+                const globalCatMeans: Record<string, number> = {};
+                ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat) => {
+                  const allInCat = data.categoryScores.filter(cs => cs.category === cat && cs.score !== null);
+                  globalCatMeans[cat] = allInCat.length > 0 
+                    ? allInCat.reduce((sum, cs) => sum + (cs.score as number), 0) / allInCat.length 
+                    : 50.0;
                 });
-                const subzoneTotalAverage = facilityCount > 0 ? totalScore / facilityCount : 0;
 
                 const catAvgs: Record<string, number> = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
                 ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat, index) => {
@@ -139,7 +137,7 @@ export default function Sidebar({
                   if (fScores.length > 0) {
                     catAvgs[`S${index + 1}`] = fScores.reduce((sum, s) => sum + (s.score as number), 0) / fScores.length;
                   } else {
-                    catAvgs[`S${index + 1}`] = subzoneTotalAverage; // Use subzone average for missing categories
+                    catAvgs[`S${index + 1}`] = globalCatMeans[cat]; // 누락 시 해당 카테고리의 전체 평균 대입 (글로벌 평균)
                   }
                 });
 
