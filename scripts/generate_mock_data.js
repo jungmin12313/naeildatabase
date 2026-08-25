@@ -106,6 +106,10 @@ try {
     const facility = facilitiesMap.get(facKey);
     facility.measurementsData[cat] = row;
 
+    if (row['사진'] && !facility.image_url) {
+      facility.image_url = row['사진'].startsWith('/') ? row['사진'] : `/${row['사진']}`;
+    }
+
     // Build measurements records
     const fields = ['유효폭', '가로너비', '세로너비', '문너비', '단차', '기울기', '출입문 종류', '경사로 유무'];
     fields.forEach(f => {
@@ -117,7 +121,7 @@ try {
           field_name: f,
           value: row[f],
           unit: f.includes('폭') || f.includes('너비') || f.includes('단차') ? (Number(row[f]) < 10 ? 'm' : 'cm') : (f.includes('기울기') ? '도' : ''),
-          photo_url: row['사진'] || '',
+          photo_url: row['사진'] ? (row['사진'].startsWith('/') ? row['사진'] : `/${row['사진']}`) : '',
           survey_date: '2026-08-17'
         });
       }
@@ -138,6 +142,7 @@ try {
     cats.forEach(cat => {
       const row = fac.measurementsData[cat];
       let scoreVal = null;
+      let rawMetrics = {};
 
       if (row) {
         const width = parseMetersToCm(row['유효폭']);
@@ -147,6 +152,16 @@ try {
         const widthH = parseMetersToCm(row['가로너비']);
         const widthV = parseMetersToCm(row['세로너비']);
         const doorW = parseMetersToCm(row['문너비']);
+
+        rawMetrics = {
+          '유효폭': row['유효폭'] !== undefined ? `${row['유효폭']}${Number(row['유효폭']) < 10 ? 'm' : 'cm'}` : '',
+          '가로너비': row['가로너비'] !== undefined ? `${row['가로너비']}cm` : '',
+          '세로너비': row['세로너비'] !== undefined ? `${row['세로너비']}cm` : '',
+          '단차': row['단차'] !== undefined ? `${row['단차']}cm` : '',
+          '기울기': row['기울기'] !== undefined ? `${row['기울기']}도` : '',
+          '문너비': row['문너비'] !== undefined ? `${row['문너비']}cm` : '',
+          '특이사항': row['비고'] || row['기타 특이사항'] || ''
+        };
 
         if (cat === 'S1_보행로') {
           scoreVal = (1/3)*score(width, 40, 120) + (1/3)*score(step, 6, 2) + (1/3)*score(slope, 14.4, 4.8);
@@ -169,7 +184,8 @@ try {
           category: cat,
           score: scoreVal,
           status: '계산완료',
-          calculated_at: new Date().toISOString()
+          calculated_at: new Date().toISOString(),
+          reason: JSON.stringify(rawMetrics)
         });
 
         // Generate AI Text
