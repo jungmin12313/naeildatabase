@@ -87,7 +87,7 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
               <div className="w-full relative rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50 flex items-center justify-center min-h-[200px]">
                 {(imageUrl.startsWith('http') || imageUrl.startsWith('/')) ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imageUrl} alt="현장 사진" className="w-full h-auto object-cover max-h-96 rounded-lg" />
+                  <img src={encodeURI(imageUrl)} alt="현장 사진" className="w-full h-auto object-cover max-h-96 rounded-lg" />
                 ) : (
                   <div className="flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
                     <ImageIcon size={32} className="mb-2 opacity-50" />

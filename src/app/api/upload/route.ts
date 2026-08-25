@@ -204,7 +204,8 @@ export async function POST(request: NextRequest) {
         name: f.name,
         category: f.category,
         location: { lat: f.lat, lng: f.lng },
-        image_url: photoUrl
+        image_url: photoUrl,
+        status: '공개'
       };
     });
 

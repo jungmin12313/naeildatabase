@@ -94,15 +94,16 @@ export default function Home() {
     ...mockDataRaw,
     zones: zonesData,
     facilities: facilitiesData.filter(f => {
+      const fStatus = f.status || '공개';
       // Admin sees everything
       if (role === 'admin') return true;
       // Official sees their assigned zone's private/public, plus other zones' public
       if (role === 'official') {
         if (f.zone_id === assignedZoneId) return true;
-        return f.status === '공개';
+        return fStatus === '공개';
       }
       // Viewer sees only public
-      return f.status === '공개';
+      return fStatus === '공개';
     }),
     categoryScores: categoryScoresData
   };
