@@ -85,7 +85,7 @@ export default function CategorySpecificChart({ category, data }: CategorySpecif
                 innerRadius={isDonut ? 50 : 0} 
                 outerRadius={80} 
                 dataKey="value" 
-                label={({name, value}) => `${name.split(' ')[0]} ${value}개`} 
+                label={({name, value}) => `${name ? String(name).split(' ')[0] : ''} ${value}개`} 
                 labelLine={false}
               >
                 {dist.map((entry, index) => (

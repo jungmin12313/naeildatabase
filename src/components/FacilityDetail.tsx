@@ -30,8 +30,10 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
           const catName = scoreObj.category.split('_')[1];
           
           let rawMetrics: Record<string, string | number> = {};
+          // @ts-ignore
           if (scoreObj.reason) {
             try {
+              // @ts-ignore
               rawMetrics = JSON.parse(scoreObj.reason);
             } catch (e) {
               // Not JSON
@@ -76,27 +78,27 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
           );
         })}
 
-        {/* Global Facility Photo */}
-        {/* @ts-ignore */}
-        {facility.image_url && (
-          <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm">
-            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">현장 사진</h4>
-            <div className="w-full relative rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50 flex items-center justify-center min-h-[200px]">
-              {/* @ts-ignore */}
-              {(facility.image_url.startsWith('http') || facility.image_url.startsWith('/')) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={facility.image_url} alt="현장 사진" className="w-full h-auto object-cover max-h-96 rounded-lg" />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
-                  <ImageIcon size={32} className="mb-2 opacity-50" />
-                  <span className="text-sm font-medium">사진 링크 오류</span>
-                  {/* @ts-ignore */}
-                  <span className="text-xs mt-1 break-all px-4">{facility.image_url}</span>
-                </div>
-              )}
+        {(() => {
+          const imageUrl = (facility as any).image_url;
+          if (!imageUrl) return null;
+          return (
+            <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm">
+              <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">현장 사진</h4>
+              <div className="w-full relative rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50 flex items-center justify-center min-h-[200px]">
+                {(imageUrl.startsWith('http') || imageUrl.startsWith('/')) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="현장 사진" className="w-full h-auto object-cover max-h-96 rounded-lg" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
+                    <ImageIcon size={32} className="mb-2 opacity-50" />
+                    <span className="text-sm font-medium">사진 링크 오류</span>
+                    <span className="text-xs mt-1 break-all px-4">{imageUrl}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
