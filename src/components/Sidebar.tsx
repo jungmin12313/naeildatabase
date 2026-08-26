@@ -506,14 +506,6 @@ export default function Sidebar({
             </div>
           </div>
         </div>
-        <div className="mt-4 text-[11px] leading-relaxed text-zinc-600 bg-zinc-50/80 p-3 rounded-xl border border-zinc-100 shadow-inner">
-          <strong className="text-zinc-800 block mb-1.5">💡 넓이지수 기반 예산 투입 판단 기준</strong>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div><span className="text-blue-600 font-bold">우수 (80점 이상)</span><br/>유지보수 위주 예산 편성</div>
-            <div><span className="text-orange-500 font-bold">보통 (50~79점)</span><br/>부분 개선 예산 투입 고려</div>
-            <div><span className="text-red-600 font-bold">미흡 (50점 미만)</span><br/>전면 개선 집중 예산 필요</div>
-          </div>
-        </div>
       </div>
 
       <div className="p-6 space-y-8 flex-1">
@@ -648,7 +640,7 @@ export default function Sidebar({
                   </button>
                 </div>
               </div>
-              <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2 print:max-h-none print:overflow-visible">
+              <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2 print:max-h-none print:overflow-visible print:space-y-0 print:grid print:grid-cols-2 print:gap-1.5 print:mt-2">
                 {ranking.map((f, i) => {
                   const getRankColorClasses = (score: number) => {
                     if (score >= 80) return { bg: 'bg-blue-50/50 hover:bg-blue-50 border-blue-100 hover:border-blue-300', numBg: 'bg-blue-100 text-blue-700', text: 'text-blue-700' };
@@ -657,32 +649,28 @@ export default function Sidebar({
                   };
                   const colors = getRankColorClasses(f.avgScore);
                   const isSelected = selectedFacility?.id === f.id;
-                  
-                  // Hide middle items during print to keep the report concise
-                  const isPrintVisible = i < 3 || i >= ranking.length - 3 || f.avgScore < 50;
 
                   return (
                     <button 
                       key={f.id}
                       onClick={() => onSelectFacility(f.id)}
-                      className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all hover:shadow-md
-                        ${isSelected ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500 ring-opacity-20' : colors.bg}
-                        ${!isPrintVisible ? 'print:hidden' : ''}`}
+                      className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all hover:shadow-md print:p-2 print:py-1.5 print:rounded-md
+                        ${isSelected ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500 ring-opacity-20' : colors.bg}`}
                     >
                       <div className="flex items-center">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${colors.numBg}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 print:w-4 print:h-4 print:text-[9px] print:mr-2 ${colors.numBg}`}>
                           {i + 1}
                         </div>
                         <div>
-                          <div className="font-medium text-zinc-900">{f.name}</div>
-                          <div className="text-xs text-zinc-500 mt-0.5">{f.facility_type}</div>
+                          <div className="font-medium text-zinc-900 print:text-xs">{f.name}</div>
+                          <div className="text-xs text-zinc-500 mt-0.5 print:text-[9px] print:mt-0">{f.facility_type}</div>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className={`text-sm font-bold mr-3 ${colors.text}`}>
+                        <div className={`text-sm font-bold mr-3 print:text-xs print:mr-1 ${colors.text}`}>
                           {f.avgScore.toFixed(1)}점
                         </div>
-                        <ChevronRight size={16} className="text-zinc-400" />
+                        <ChevronRight size={16} className="text-zinc-400 print:hidden" />
                       </div>
                     </button>
                   );
