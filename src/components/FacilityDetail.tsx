@@ -66,6 +66,9 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
                             </span>
                             <span className={`text-sm font-black text-zinc-900 ${isNotes ? 'font-medium whitespace-pre-wrap' : ''}`}>
                               {value}
+                              {!isNotes && (key.includes('유효폭') || key.includes('너비')) && typeof value !== 'boolean' && !String(value).match(/[a-zA-Z가-힣°]/) && 'm'}
+                              {!isNotes && key.includes('단차') && typeof value !== 'boolean' && !String(value).match(/[a-zA-Z가-힣°]/) && 'cm'}
+                              {!isNotes && key.includes('기울기') && typeof value !== 'boolean' && !String(value).match(/[a-zA-Z가-힣°]/) && '°'}
                             </span>
                           </div>
                         );
