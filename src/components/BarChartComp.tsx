@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { MockData } from '@/app/page';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList, ReferenceLine } from 'recharts';
 
 interface BarChartCompProps {
   facilities: MockData['facilities'];
@@ -46,6 +46,26 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
   .filter(d => d.hasData)
   .filter(d => searchTerm ? d.name.toLowerCase().includes(searchTerm.toLowerCase()) : true)
   .sort((a, b) => sortOrder === 'desc' ? b.score - a.score : a.score - b.score);
+
+  const zoneAvg = chartData.length > 0 ? chartData.reduce((sum, item) => sum + item.score, 0) / chartData.length : 0;
+  
+  let globalAvg = 0;
+  if (selectedCategory === "ALL") {
+    // 5 카테고리별로 먼저 각 시설의 평균을 구한 뒤 전체 평균
+    const facilityMap = new Map<string, { total: number, count: number }>();
+    categoryScores.filter(s => s.score !== null).forEach(s => {
+      const f = facilityMap.get(s.facility_id) || { total: 0, count: 0 };
+      f.total += s.score!;
+      f.count += 1;
+      facilityMap.set(s.facility_id, f);
+    });
+    let sum = 0;
+    facilityMap.forEach(f => sum += (f.total / f.count));
+    globalAvg = facilityMap.size > 0 ? sum / facilityMap.size : 0;
+  } else {
+    const catScores = categoryScores.filter(s => s.category === selectedCategory && s.score !== null);
+    globalAvg = catScores.length > 0 ? catScores.reduce((sum, s) => sum + s.score!, 0) / catScores.length : 0;
+  }
 
   // Identify bottom N (e.g., bottom 3)
   const bottomThreshold = chartData.length > 3 ? chartData[chartData.length - 3].score : 100;
@@ -95,8 +115,11 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
                 cursor={{ fill: '#f4f4f5' }}
                 contentStyle={{ borderRadius: '8px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
               />
+              <ReferenceLine y={globalAvg} stroke="#9ca3af" strokeDasharray="3 3" label={{ position: 'top', value: `전체평균(${Math.round(globalAvg)}점)`, fill: '#9ca3af', fontSize: 10 }} />
+              <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
               <Bar 
                 dataKey="score" 
+                isAnimationActive={false}
                 radius={[4, 4, 0, 0]} 
                 maxBarSize={40}
                 minPointSize={4}

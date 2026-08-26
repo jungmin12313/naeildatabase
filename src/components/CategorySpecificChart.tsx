@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line, CartesianGrid, ReferenceLine } from 'recharts';
 
 interface CategorySpecificChartProps {
   category: string;
@@ -13,39 +13,17 @@ export default function CategorySpecificChart({ category, data }: CategorySpecif
     return <div className="h-48 flex items-center justify-center text-zinc-400 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/50">데이터가 없습니다.</div>;
   }
 
-  // S1: Area Chart (Continuous path flow)
+  // S1: Bar Chart (Changed from Area Chart per request)
   if (category === 'S1_보행로') {
+    const zoneAvg = chartData.length > 0 ? chartData.reduce((sum, d) => sum + d.avgScore, 0) / chartData.length : 0;
     return (
       <div className="w-full h-64 bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm page-break-inside-avoid">
         <h4 className="text-sm font-bold text-zinc-800 mb-4 flex items-center">
           <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-          보행로 접근성 구간별 흐름 (Area Chart)
+          보행로 접근성 비교 (Bar Chart)
         </h4>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-            <XAxis dataKey="name" tick={{fontSize: 10, fill: '#71717a'}} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-            <YAxis domain={[0, 100]} tick={{fontSize: 10, fill: '#71717a'}} axisLine={false} tickLine={false} />
-            <Tooltip 
-              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-            />
-            <Area type="monotone" dataKey="avgScore" name="점수" stroke="#3b82f6" fill="#93c5fd" strokeWidth={2} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  }
-
-  // S2: Bar Chart (Comparing specific entrances)
-  if (category === 'S2_출입구') {
-    return (
-      <div className="w-full h-64 bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm page-break-inside-avoid">
-        <h4 className="text-sm font-bold text-zinc-800 mb-4 flex items-center">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
-          출입구별 접근성 비교 (Bar Chart)
-        </h4>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
             <XAxis dataKey="name" tick={{fontSize: 10, fill: '#71717a'}} interval="preserveStartEnd" axisLine={false} tickLine={false} />
             <YAxis domain={[0, 100]} tick={{fontSize: 10, fill: '#71717a'}} axisLine={false} tickLine={false} />
@@ -53,7 +31,34 @@ export default function CategorySpecificChart({ category, data }: CategorySpecif
               cursor={{fill: '#f4f4f5'}}
               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
-            <Bar dataKey="avgScore" name="점수" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'top', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
+            <Bar isAnimationActive={false} dataKey="avgScore" name="점수" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  // S2: Bar Chart (Comparing specific entrances)
+  if (category === 'S2_출입구') {
+    const zoneAvg = chartData.length > 0 ? chartData.reduce((sum, d) => sum + d.avgScore, 0) / chartData.length : 0;
+    return (
+      <div className="w-full h-64 bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm page-break-inside-avoid">
+        <h4 className="text-sm font-bold text-zinc-800 mb-4 flex items-center">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+          출입구별 접근성 비교 (Bar Chart)
+        </h4>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+            <XAxis dataKey="name" tick={{fontSize: 10, fill: '#71717a'}} interval="preserveStartEnd" axisLine={false} tickLine={false} />
+            <YAxis domain={[0, 100]} tick={{fontSize: 10, fill: '#71717a'}} axisLine={false} tickLine={false} />
+            <Tooltip 
+              cursor={{fill: '#f4f4f5'}}
+              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            />
+            <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'top', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
+            <Bar isAnimationActive={false} dataKey="avgScore" name="점수" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -79,7 +84,7 @@ export default function CategorySpecificChart({ category, data }: CategorySpecif
         {dist.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie 
+              <Pie isAnimationActive={false} 
                 data={dist} 
                 cx="50%" cy="50%" 
                 innerRadius={isDonut ? 50 : 0} 
@@ -118,7 +123,7 @@ export default function CategorySpecificChart({ category, data }: CategorySpecif
             <Tooltip 
               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
-            <Line type="monotone" dataKey="avgScore" name="점수" stroke="#f97316" strokeWidth={3} dot={{ r: 4, fill: '#f97316', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+            <Line isAnimationActive={false} type="monotone" dataKey="avgScore" name="점수" stroke="#f97316" strokeWidth={3} dot={{ r: 4, fill: '#f97316', strokeWidth: 0 }} activeDot={{ r: 6 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>

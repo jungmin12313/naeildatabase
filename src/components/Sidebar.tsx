@@ -506,6 +506,14 @@ export default function Sidebar({
             </div>
           </div>
         </div>
+        <div className="mt-4 text-[11px] leading-relaxed text-zinc-600 bg-zinc-50/80 p-3 rounded-xl border border-zinc-100 shadow-inner">
+          <strong className="text-zinc-800 block mb-1.5">💡 넓이지수 기반 예산 투입 판단 기준</strong>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div><span className="text-blue-600 font-bold">우수 (80점 이상)</span><br/>유지보수 위주 예산 편성</div>
+            <div><span className="text-orange-500 font-bold">보통 (50~79점)</span><br/>부분 개선 예산 투입 고려</div>
+            <div><span className="text-red-600 font-bold">미흡 (50점 미만)</span><br/>전면 개선 집중 예산 필요</div>
+          </div>
+        </div>
       </div>
 
       <div className="p-6 space-y-8 flex-1">
@@ -642,19 +650,27 @@ export default function Sidebar({
               </div>
               <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2 print:max-h-none print:overflow-visible">
                 {ranking.map((f, i) => {
-                  const isBottom = i >= ranking.length - Math.min(3, ranking.length) || f.avgScore < 50; 
+                  const getRankColorClasses = (score: number) => {
+                    if (score >= 80) return { bg: 'bg-blue-50/50 hover:bg-blue-50 border-blue-100 hover:border-blue-300', numBg: 'bg-blue-100 text-blue-700', text: 'text-blue-700' };
+                    if (score >= 50) return { bg: 'bg-orange-50/50 hover:bg-orange-50 border-orange-100 hover:border-orange-300', numBg: 'bg-orange-100 text-orange-700', text: 'text-orange-700' };
+                    return { bg: 'bg-red-50/50 hover:bg-red-50 border-red-100 hover:border-red-300', numBg: 'bg-red-100 text-red-700', text: 'text-red-700' };
+                  };
+                  const colors = getRankColorClasses(f.avgScore);
+                  const isSelected = selectedFacility?.id === f.id;
+                  
+                  // Hide middle items during print to keep the report concise
+                  const isPrintVisible = i < 3 || i >= ranking.length - 3 || f.avgScore < 50;
+
                   return (
                     <button 
                       key={f.id}
                       onClick={() => onSelectFacility(f.id)}
                       className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all hover:shadow-md
-                        ${selectedFacility?.id === f.id ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500 ring-opacity-20' : 
-                        isBottom ? 'bg-red-50/50 border-red-100 hover:border-red-300' : 'bg-white border-zinc-200 hover:border-blue-300'}`}
+                        ${isSelected ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500 ring-opacity-20' : colors.bg}
+                        ${!isPrintVisible ? 'print:hidden' : ''}`}
                     >
                       <div className="flex items-center">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 
-                          ${i === 0 ? 'bg-yellow-100 text-yellow-700' : 
-                            isBottom ? 'bg-red-100 text-red-700' : 'bg-zinc-100 text-zinc-600'}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${colors.numBg}`}>
                           {i + 1}
                         </div>
                         <div>
@@ -663,7 +679,7 @@ export default function Sidebar({
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className={`text-sm font-bold mr-3 ${isBottom ? 'text-red-600' : 'text-zinc-700'}`}>
+                        <div className={`text-sm font-bold mr-3 ${colors.text}`}>
                           {f.avgScore.toFixed(1)}점
                         </div>
                         <ChevronRight size={16} className="text-zinc-400" />
@@ -682,10 +698,10 @@ export default function Sidebar({
               />
             </section>
             
-            {/* Print-only: All Category Specific Charts */}
-            <section className="hidden print:block mt-8 space-y-8 page-break-before-always">
-              <h3 className="text-2xl font-bold text-zinc-900 mb-6 text-center border-b-2 pb-2">카테고리별 맞춤형 시각화 리포트</h3>
-              {['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].map(cat => {
+            {/* Selected Category Specific Chart */}
+            <section className="block mt-8 w-full print:page-break-before-always">
+              <h3 className="text-xl font-bold text-zinc-900 mb-6 text-center border-b-2 pb-2">{selectedCategory.split('_')[1]} 시각화 리포트</h3>
+              {[selectedCategory].map(cat => {
                 const catRanking = displayFacilities.map(f => {
                   const scores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.category === cat && cs.score !== null);
                   const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
