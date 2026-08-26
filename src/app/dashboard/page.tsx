@@ -112,13 +112,28 @@ export default function Dashboard() {
     <div className="min-h-screen bg-zinc-50 p-8 font-sans print:bg-white print:p-0">
       <div className="max-w-6xl mx-auto space-y-8 print:space-y-4">
         
-        {/* Print Only Header */}
-        <div className="hidden print:block border-b-2 border-zinc-900 pb-4 mb-6">
-          <div className="flex justify-between items-start mb-4">
-            <h1 className="text-3xl font-black text-left">공공시설물 접근성 진단<br/>종합 보고서</h1>
-            
-            {/* 결재란 (Signature Box) */}
-            <table className="border-collapse border border-zinc-900 text-center text-xs">
+        {/* Unified Header (Visible on both Screen and Print) */}
+        <div className="border-b-2 border-zinc-900 pb-4 mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center text-blue-600 font-bold mb-2 text-sm tracking-wider">
+              {role === 'admin' ? 'SYSTEM ADMIN' : 'OFFICIAL DASHBOARD'}
+            </div>
+            <h1 className="text-3xl font-black text-left text-zinc-900 tracking-tight">
+              공공시설물 접근성 진단<br className="hidden print:block" /> 종합 보고서
+            </h1>
+            <div className="flex space-x-4 text-sm font-bold mt-4 text-zinc-700">
+              <span className="flex items-center">
+                <MapPin size={16} className="mr-1" /> 관할 구역: {zoneName}
+              </span>
+              <span className="print:block hidden">
+                출력 일자: {new Date().toLocaleDateString('ko-KR')}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-end space-x-6">
+            {/* 결재란 (Signature Box) - Visible on both as per user request for identical UI */}
+            <table className="border-collapse border border-zinc-900 text-center text-xs bg-white">
               <tbody>
                 <tr>
                   <th rowSpan={2} className="border border-zinc-900 bg-zinc-100 p-2 w-8">결<br/>재</th>
@@ -133,41 +148,26 @@ export default function Dashboard() {
                 </tr>
               </tbody>
             </table>
-          </div>
-          <div className="flex justify-between text-sm font-bold mt-2">
-            <span>관할 구역: {zoneName}</span>
-            <span>출력 일자: {new Date().toLocaleDateString('ko-KR')}</span>
+
+            {/* Action Buttons - Hidden on Print */}
+            <div className="flex flex-col space-y-2 print:hidden">
+              <button 
+                onClick={() => window.print()}
+                className="flex items-center justify-center px-4 py-2.5 bg-zinc-800 hover:bg-zinc-900 text-white font-semibold rounded-xl transition-colors shadow-sm"
+              >
+                <Printer size={18} className="mr-2" />
+                PDF 보고서 출력
+              </button>
+              <button 
+                onClick={handleExportExcel}
+                className="flex items-center justify-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
+              >
+                <Download size={18} className="mr-2" />
+                Excel 추출
+              </button>
+            </div>
           </div>
         </div>
-
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 print:hidden">
-          <div>
-            <div className="flex items-center text-blue-600 font-bold mb-2 text-sm tracking-wider">
-              {role === 'admin' ? 'SYSTEM ADMIN' : 'OFFICIAL DASHBOARD'}
-            </div>
-            <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">기관 대시보드</h1>
-            <p className="text-zinc-500 mt-2 flex items-center">
-              <MapPin size={16} className="mr-1" />
-              관할 구역: <strong className="ml-1 text-zinc-700">{zoneName}</strong>
-            </p>
-          </div>
-          <div className="flex space-x-2">
-            <button 
-              onClick={() => window.print()}
-              className="flex items-center px-4 py-2.5 bg-zinc-800 hover:bg-zinc-900 text-white font-semibold rounded-xl transition-colors shadow-sm"
-            >
-              <Printer size={18} className="mr-2" />
-              PDF 보고서 출력
-            </button>
-            <button 
-              onClick={handleExportExcel}
-              className="flex items-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
-            >
-              <Download size={18} className="mr-2" />
-              Excel 추출
-            </button>
-          </div>
-        </header>
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 page-break-avoid print:grid-cols-3">
@@ -255,9 +255,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Print-only Table Summary of all facilities */}
-        <div className="hidden print:block mt-8 page-break-avoid">
-          <div className="border-b-2 border-zinc-900 pb-2 mb-4 flex items-end justify-between">
+        {/* Table Summary of all facilities (Visible on both Screen and Print) */}
+        <div className="block mt-8 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm print:bg-transparent print:p-0 print:border-none print:shadow-none page-break-avoid">
+          <div className="border-b-2 border-zinc-100 print:border-zinc-900 pb-4 print:pb-2 mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
             <h3 className="text-lg font-bold text-zinc-900">전체 시설 현황 및 카테고리별 요약</h3>
             <div className="flex space-x-3 text-xs font-medium pb-1">
               <div className="flex items-center"><span className="w-2.5 h-2.5 bg-blue-600 rounded-full mr-1.5"></span>우수 (80점 이상)</div>
