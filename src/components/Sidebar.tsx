@@ -5,6 +5,7 @@ import BarChartComp from './BarChartComp';
 import FacilityDetail from './FacilityDetail';
 import dynamic from 'next/dynamic';
 import { ChevronRight, ArrowLeft, MapPin, Printer } from 'lucide-react';
+import { supabase } from '@/utils/supabase';
 
 const CategoryDetailCharts = dynamic(() => import('./CategoryDetailCharts'), { ssr: false });
 const CategorySpecificChart = dynamic(() => import('./CategorySpecificChart'), { ssr: false });
@@ -85,7 +86,7 @@ export default function Sidebar({
     setEditForm(newForm);
   };
 
-  const handleSaveSub = (z: any) => {
+  const handleSaveSub = async (z: any) => {
     if (onUpdateZones) {
       const newZones = data.zones.map((zone) => {
         if (zone.id === z.id) {
@@ -95,6 +96,30 @@ export default function Sidebar({
       });
       // @ts-ignore
       onUpdateZones(newZones as any);
+
+      // Sync changes to Supabase
+      try {
+        const currentSubIds = editForm.map(s => s.id);
+        const oldSubIds = (z.subZones || []).map((s: any) => s.id);
+        const removedIds = oldSubIds.filter(id => !currentSubIds.includes(id));
+        
+        if (removedIds.length > 0) {
+          await supabase.from('sub_zones').delete().in('id', removedIds);
+        }
+        
+        if (editForm.length > 0) {
+          const upsertData = editForm.map(s => ({
+            id: s.id,
+            zone_id: z.id,
+            name: s.name,
+            polygon: s.polygon,
+            final_index: s.final_index
+          }));
+          await supabase.from('sub_zones').upsert(upsertData, { onConflict: 'id' });
+        }
+      } catch (err) {
+        console.error('Failed to sync sub_zones to Supabase', err);
+      }
     }
     setEditingZoneId(null);
   };
@@ -152,7 +177,8 @@ export default function Sidebar({
                 const avgScore = finalIndexRaw !== null ? Math.round(finalIndexRaw) : null;
 
                 const newSub = {
-                  id: 'sub_' + Date.now(),
+                  id: reselectingSubZoneId || 'sub_' + Date.now(),
+                  zone_id: drawingTargetZoneId,
                   name: `신규 구역 (${facilitiesInPolygon.length}개 시설)`,
                   final_index: avgScore,
                   polygon: {
@@ -163,21 +189,25 @@ export default function Sidebar({
 
                 // Apply newSub to the target zone
                 if (onUpdateZones && drawingTargetZoneId) {
+                  let finalSubZones: any[] = [];
                   const newZones = data.zones.map(z => {
                     if (z.id === drawingTargetZoneId) {
                       // @ts-ignore
                       let updatedSubZones = z.subZones ? [...z.subZones] : [];
                       
                       if (reselectingSubZoneId) {
-                        updatedSubZones = updatedSubZones.map((s: any) => 
-                          s.id === reselectingSubZoneId 
-                            ? { ...s, polygon: newSub.polygon, final_index: newSub.final_index, name: newSub.name } 
-                            : s
-                        );
+                        updatedSubZones = updatedSubZones.map((s: any) => {
+                          if (s.id === reselectingSubZoneId) {
+                            newSub.name = s.name; // Keep old name when reselecting
+                            return { ...s, polygon: newSub.polygon, final_index: newSub.final_index };
+                          }
+                          return s;
+                        });
                       } else {
                         updatedSubZones.push(newSub as any);
                       }
-
+                      
+                      finalSubZones = updatedSubZones;
                       return {
                         ...z,
                         subZones: updatedSubZones
@@ -187,6 +217,9 @@ export default function Sidebar({
                   });
                   // @ts-ignore
                   onUpdateZones(newZones as any);
+                  
+                  // Immediate Sync to Supabase
+                  supabase.from('sub_zones').upsert(newSub, { onConflict: 'id' }).catch(err => console.error(err));
                   
                   const targetZone = newZones.find(z => z.id === drawingTargetZoneId);
                   if (targetZone) {

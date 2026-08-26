@@ -64,13 +64,28 @@ export default function Home() {
           return; // Exit early since we used Supabase
         }
         
-        // If we reach here, Supabase is empty or failed, so start with empty arrays
-        setZonesData([]);
+        // If we reach here, Supabase is empty or failed
+        // Fallback to localStorage if available (useful for local mock usage)
+        const localZones = localStorage.getItem('naeil_zonesData');
+        if (localZones) {
+          try {
+            setZonesData(JSON.parse(localZones));
+          } catch(e) {
+            setZonesData([]);
+          }
+        } else {
+          setZonesData([]);
+        }
         setFacilitiesData([]);
         setCategoryScoresData([]);
         setMounted(true);
       } catch (err) {
-        setZonesData([]);
+        const localZones = localStorage.getItem('naeil_zonesData');
+        if (localZones) {
+          try { setZonesData(JSON.parse(localZones)); } catch(e) { setZonesData([]); }
+        } else {
+          setZonesData([]);
+        }
         setFacilitiesData([]);
         setCategoryScoresData([]);
         setMounted(true);
