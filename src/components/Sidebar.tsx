@@ -467,6 +467,12 @@ export default function Sidebar({
     return { rankingTitle: title, ranking: mappedRanking };
   }, [displayFacilities, data.categoryScores, selectedCategory, selectedSubZone, selectedSubZoneId, searchTerm, sortOrder]);
 
+  const globalAvg = useMemo(() => {
+    if (!selectedCategory) return undefined;
+    const scores = data.categoryScores.filter(cs => cs.category === selectedCategory && cs.score !== null);
+    return scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
+  }, [data.categoryScores, selectedCategory]);
+
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="p-6 border-b border-zinc-200 bg-white sticky top-0 z-10 shadow-sm">
@@ -691,6 +697,7 @@ export default function Sidebar({
               <CategorySpecificChart
                 category={selectedCategory}
                 data={ranking}
+                globalAvg={globalAvg}
               />
             </section>
             

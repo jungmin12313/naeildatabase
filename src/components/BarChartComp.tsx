@@ -69,37 +69,41 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
 
   // Identify bottom N (e.g., bottom 3)
   const bottomThreshold = chartData.length > 3 ? chartData[chartData.length - 3].score : 100;
+  const maxNameLength = chartData.length > 0 ? Math.max(...chartData.map(d => d.name.length)) : 0;
+  const dynamicBottomMargin = Math.max(40, maxNameLength * 6);
+  const chartHeight = 220 + dynamicBottomMargin;
+  const rankingTitle = selectedCategory === "ALL" ? "종합 접근성 순위" : `${selectedCategory.split('_')[1]} 시설 순위`;
 
   return (
-    <div className="w-full space-y-4">
-      <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100">
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
-          <h4 className="text-sm font-semibold text-zinc-700 text-center sm:text-left">
-            {selectedCategory === "ALL" ? "종합 접근성 순위" : `${selectedCategory.split('_')[1]} 시설 순위`}
-          </h4>
-          <div className="flex items-center gap-2 text-xs">
-            <input 
-              type="text" 
-              placeholder="시설명 검색..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-2 py-1 border border-zinc-200 rounded-md outline-none focus:border-blue-400"
-            />
-            <button 
-              onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-              className="px-2 py-1 bg-white border border-zinc-200 rounded-md hover:bg-zinc-100 text-zinc-600 transition-colors"
-            >
-              {sortOrder === 'desc' ? '내림차순 ↓' : '오름차순 ↑'}
-            </button>
-          </div>
+    <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm print:shadow-none print:border-none print:p-0">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6">
+        <div>
+          <h3 className="text-lg font-bold text-zinc-800">{rankingTitle}</h3>
+          <p className="text-xs text-zinc-500 mt-1">평균 점수 기준 내림차순 정렬</p>
         </div>
-        <div className="w-full overflow-x-auto overflow-y-hidden pb-2 custom-scrollbar">
-          <div style={{ minWidth: '100%', width: Math.max(100, chartData.length * 35) }} className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={chartData} 
-                margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
-              >
+        <div className="flex items-center space-x-2 mt-4 sm:mt-0 print:hidden">
+          <input 
+            type="text" 
+            placeholder="시설명 검색..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-zinc-200 rounded-md outline-none focus:border-blue-400"
+          />
+          <button 
+            onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+            className="px-2 py-1 bg-white border border-zinc-200 rounded-md hover:bg-zinc-100 text-zinc-600 transition-colors"
+          >
+            {sortOrder === 'desc' ? '내림차순 ↓' : '오름차순 ↑'}
+          </button>
+        </div>
+      </div>
+      <div className="w-full overflow-x-auto overflow-y-hidden pb-2 custom-scrollbar">
+        <div style={{ minWidth: '100%', width: Math.max(100, chartData.length * 35), height: chartHeight }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart 
+              data={chartData} 
+              margin={{ top: 10, right: 10, left: -20, bottom: dynamicBottomMargin }}
+            >
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
               <XAxis 
                 dataKey="name" 
@@ -142,7 +146,7 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.score <= bottomThreshold || entry.score < 50 ? '#f87171' : '#60a5fa'} 
+                    fill={entry.score < 100 ? '#ef4444' : '#3b82f6'} 
                     className="hover:opacity-80 transition-opacity"
                   />
                 ))}

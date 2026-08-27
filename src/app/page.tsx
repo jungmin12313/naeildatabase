@@ -202,6 +202,7 @@ export default function Home() {
           drawingTargetZoneId={drawingTargetZoneId}
           reselectingSubZoneId={reselectingSubZoneId}
           displayFacilities={displayFacilities}
+          selectedFacilityId={selectedFacilityId}
           onSelectFacility={setSelectedFacilityId}
         />
         {/* Top Header Overlay */}

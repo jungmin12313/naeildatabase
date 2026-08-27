@@ -5,9 +5,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 interface CategorySpecificChartProps {
   category: string;
   data: any[]; // Expects the ranking array format
+  globalAvg?: number;
 }
 
-export default function CategorySpecificChart({ category, data }: CategorySpecificChartProps) {
+export default function CategorySpecificChart({ category, data, globalAvg }: CategorySpecificChartProps) {
   const chartData = data.filter(d => d.hasData);
   if (!chartData || chartData.length === 0) {
     return <div className="h-48 flex items-center justify-center text-zinc-400 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/50">데이터가 없습니다.</div>;
@@ -31,7 +32,8 @@ export default function CategorySpecificChart({ category, data }: CategorySpecif
               cursor={{fill: '#f4f4f5'}}
               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
-            <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'top', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
+            {globalAvg !== undefined && <ReferenceLine y={globalAvg} stroke="#9ca3af" strokeDasharray="3 3" label={{ position: 'top', value: `전체평균(${Math.round(globalAvg)}점)`, fill: '#9ca3af', fontSize: 10 }} />}
+            <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
             <Bar isAnimationActive={false} dataKey="avgScore" name="점수" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
           </BarChart>
         </ResponsiveContainer>
@@ -57,7 +59,8 @@ export default function CategorySpecificChart({ category, data }: CategorySpecif
               cursor={{fill: '#f4f4f5'}}
               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
-            <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'top', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
+            {globalAvg !== undefined && <ReferenceLine y={globalAvg} stroke="#9ca3af" strokeDasharray="3 3" label={{ position: 'top', value: `전체평균(${Math.round(globalAvg)}점)`, fill: '#9ca3af', fontSize: 10 }} />}
+            <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
             <Bar isAnimationActive={false} dataKey="avgScore" name="점수" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
           </BarChart>
         </ResponsiveContainer>

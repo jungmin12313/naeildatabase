@@ -27,7 +27,7 @@ export default function RadarChartComp({ data, onCategoryClick }: { data: RadarD
               }
             }}
           />
-          <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 10 }} axisLine={false} tickLine={false} />
+          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 10 }} axisLine={false} tickLine={false} />
           <Tooltip 
             cursor={{ fill: '#f4f4f5' }}
             content={({ active, payload }) => {
