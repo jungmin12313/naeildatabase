@@ -417,47 +417,55 @@ export default function Sidebar({
   // @ts-ignore
   const selectedSubZone = selectedZone.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
 
-  const zoneScores = data.categoryScores.filter(cs => displayFacilities.some(f => f.id === cs.facility_id));
-  const avgScores: Record<string, { total: number, count: number }> = {
-    'S1_보행로': { total: 0, count: 0 },
-    'S2_출입구': { total: 0, count: 0 },
-    'S3_화장실': { total: 0, count: 0 },
-    'S4_엘리베이터': { total: 0, count: 0 },
-    'S5_주차장': { total: 0, count: 0 },
-  };
-
-  zoneScores.forEach(s => {
-    if (s.score !== null && avgScores[s.category]) {
-      avgScores[s.category].total += s.score;
-      avgScores[s.category].count++;
-    }
-  });
-
-  const radarData = Object.keys(avgScores).map(cat => {
-    const realScore = avgScores[cat].count > 0 ? Math.round(avgScores[cat].total / avgScores[cat].count) : 0;
-    return {
-      id: cat,
-      subject: cat.split('_')[1],
-      A: realScore,
-      visualA: realScore < 5 ? 5 : realScore, // minimum 5 for visual area rendering
-      fullMark: 100
+  const { zoneScores, avgScores, radarData } = useMemo(() => {
+    const scores = data.categoryScores.filter(cs => displayFacilities.some(f => f.id === cs.facility_id));
+    const avgs: Record<string, { total: number, count: number }> = {
+      'S1_보행로': { total: 0, count: 0 },
+      'S2_출입구': { total: 0, count: 0 },
+      'S3_화장실': { total: 0, count: 0 },
+      'S4_엘리베이터': { total: 0, count: 0 },
+      'S5_주차장': { total: 0, count: 0 },
     };
-  });
+
+    scores.forEach(s => {
+      if (s.score !== null && avgs[s.category]) {
+        avgs[s.category].total += s.score;
+        avgs[s.category].count++;
+      }
+    });
+
+    const radar = Object.keys(avgs).map(cat => {
+      const realScore = avgs[cat].count > 0 ? Math.round(avgs[cat].total / avgs[cat].count) : 0;
+      return {
+        id: cat,
+        subject: cat.split('_')[1],
+        A: realScore,
+        visualA: realScore < 5 ? 5 : realScore, // minimum 5 for visual area rendering
+        fullMark: 100
+      };
+    });
+
+    return { zoneScores: scores, avgScores: avgs, radarData: radar };
+  }, [data.categoryScores, displayFacilities]);
 
   // Calculate facility ranking for the selected category (or overall if null, but user wants category-specific)
-  let rankingTitle = selectedSubZone ? `${selectedSubZone.name} 전체 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? "미지정 구역 전체 시설 접근성 순위" : "전체 시설 접근성 순위");
-  let ranking = displayFacilities.map(f => {
-    let scores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
-    if (selectedCategory) {
-      scores = scores.filter(cs => cs.category === selectedCategory);
-      rankingTitle = selectedSubZone ? `${selectedSubZone.name} ${selectedCategory.split('_')[1]} 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? `미지정 구역 ${selectedCategory.split('_')[1]} 시설 접근성 순위` : `${selectedCategory.split('_')[1]} 시설 접근성 순위`);
-    }
-    const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
-    return { ...f, avgScore: avg, hasData: scores.length > 0 };
-  })
-  .filter(f => f.hasData)
-  .filter(f => searchTerm ? f.name.toLowerCase().includes(searchTerm.toLowerCase()) : true)
-  .sort((a, b) => sortOrder === 'desc' ? b.avgScore - a.avgScore : a.avgScore - b.avgScore);
+  const { rankingTitle, ranking } = useMemo(() => {
+    let title = selectedSubZone ? `${selectedSubZone.name} 전체 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? "미지정 구역 전체 시설 접근성 순위" : "전체 시설 접근성 순위");
+    const mappedRanking = displayFacilities.map(f => {
+      let scores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+      if (selectedCategory) {
+        scores = scores.filter(cs => cs.category === selectedCategory);
+        title = selectedSubZone ? `${selectedSubZone.name} ${selectedCategory.split('_')[1]} 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? `미지정 구역 ${selectedCategory.split('_')[1]} 시설 접근성 순위` : `${selectedCategory.split('_')[1]} 시설 접근성 순위`);
+      }
+      const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
+      return { ...f, avgScore: avg, hasData: scores.length > 0 };
+    })
+    .filter(f => f.hasData)
+    .filter(f => searchTerm ? f.name.toLowerCase().includes(searchTerm.toLowerCase()) : true)
+    .sort((a, b) => sortOrder === 'desc' ? b.avgScore - a.avgScore : a.avgScore - b.avgScore);
+
+    return { rankingTitle: title, ranking: mappedRanking };
+  }, [displayFacilities, data.categoryScores, selectedCategory, selectedSubZone, selectedSubZoneId, searchTerm, sortOrder]);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">

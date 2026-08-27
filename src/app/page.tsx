@@ -160,8 +160,8 @@ export default function Home() {
     <main className="flex h-screen w-full overflow-hidden bg-zinc-50 print:block print:h-auto print:overflow-visible">
       {/* Left Sidebar for Facility Details */}
       {selectedFacility && (
-        <div className="w-[440px] h-full bg-white border-r border-zinc-200 shadow-xl z-20 flex flex-col relative animate-in slide-in-from-left print:hidden">
-          <div className="absolute top-4 right-4 z-30">
+        <div className="absolute md:relative bottom-0 left-0 w-full md:w-[440px] h-[60vh] md:h-full bg-white border-t md:border-t-0 md:border-r border-zinc-200 shadow-2xl md:shadow-xl z-40 flex flex-col animate-in slide-in-from-bottom md:slide-in-from-left print:hidden overflow-hidden">
+          <div className="absolute top-4 right-4 z-50">
             <button 
               onClick={() => setSelectedFacilityId(null)}
               className="p-2 bg-white rounded-full shadow-md border border-zinc-200 text-zinc-500 hover:text-zinc-900 transition-colors"
@@ -169,12 +169,14 @@ export default function Home() {
               <X size={20} />
             </button>
           </div>
-          <FacilityDetail 
-            facility={selectedFacility} 
-            measurements={mockData.measurements.filter(m => m.facility_id === selectedFacility.id)}
-            scores={mockData.categoryScores.filter(s => s.facility_id === selectedFacility.id)}
-            texts={mockData.diagnosisTexts.filter(t => t.facility_id === selectedFacility.id)}
-          />
+          <div className="overflow-y-auto h-full flex-1 w-full">
+            <FacilityDetail 
+              facility={selectedFacility} 
+              measurements={mockData.measurements.filter(m => m.facility_id === selectedFacility.id)}
+              scores={mockData.categoryScores.filter(s => s.facility_id === selectedFacility.id)}
+              texts={mockData.diagnosisTexts.filter(t => t.facility_id === selectedFacility.id)}
+            />
+          </div>
         </div>
       )}
 
@@ -211,7 +213,7 @@ export default function Home() {
         </div>
       </div>
       
-      <div className="w-[480px] h-full bg-white border-l border-zinc-200 shadow-xl z-20 overflow-y-auto flex flex-col print:w-full print:h-auto print:border-none print:shadow-none print:overflow-visible">
+      <div className="absolute md:relative bottom-0 right-0 w-full md:w-[480px] h-[50vh] md:h-full bg-white border-t md:border-t-0 md:border-l border-zinc-200 shadow-2xl md:shadow-xl z-30 flex flex-col print:w-full print:h-auto print:border-none print:shadow-none print:overflow-visible transition-transform">
         <Sidebar 
           data={mockData}
           selectedZone={selectedZone}
