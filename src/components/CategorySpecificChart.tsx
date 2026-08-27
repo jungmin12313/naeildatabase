@@ -14,56 +14,56 @@ export default function CategorySpecificChart({ category, data, globalAvg }: Cat
     return <div className="h-48 flex items-center justify-center text-zinc-400 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/50">데이터가 없습니다.</div>;
   }
 
-  // S1: Bar Chart (Changed from Area Chart per request)
-  if (category === 'S1_보행로') {
+  // S1 & S2: Bar Chart (Changed from Area Chart per request, ensuring all data is visible without truncation)
+  if (category === 'S1_보행로' || category === 'S2_출입구') {
+    const isS1 = category === 'S1_보행로';
     const zoneAvg = chartData.length > 0 ? chartData.reduce((sum, d) => sum + d.avgScore, 0) / chartData.length : 0;
-    return (
-      <div className="w-full h-64 bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm page-break-inside-avoid">
-        <h4 className="text-sm font-bold text-zinc-800 mb-4 flex items-center">
-          <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-          보행로 접근성 비교 (Bar Chart)
-        </h4>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-            <XAxis dataKey="name" tick={{fontSize: 10, fill: '#71717a'}} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-            <YAxis domain={[0, 100]} tick={{fontSize: 10, fill: '#71717a'}} axisLine={false} tickLine={false} />
-            <Tooltip 
-              cursor={{fill: '#f4f4f5'}}
-              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-            />
-            {globalAvg !== undefined && <ReferenceLine y={globalAvg} stroke="#9ca3af" strokeDasharray="3 3" label={{ position: 'top', value: `전체평균(${Math.round(globalAvg)}점)`, fill: '#9ca3af', fontSize: 10 }} />}
-            <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
-            <Bar isAnimationActive={false} dataKey="avgScore" name="점수" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  }
+    
+    // Calculate dynamic bottom margin to prevent long name truncation
+    const maxNameLength = chartData.length > 0 ? Math.max(...chartData.map(d => d.name.length)) : 0;
+    const dynamicBottomMargin = Math.max(40, maxNameLength * 6);
+    const chartHeight = 220 + dynamicBottomMargin;
 
-  // S2: Bar Chart (Comparing specific entrances)
-  if (category === 'S2_출입구') {
-    const zoneAvg = chartData.length > 0 ? chartData.reduce((sum, d) => sum + d.avgScore, 0) / chartData.length : 0;
     return (
-      <div className="w-full h-64 bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm page-break-inside-avoid">
+      <div className="w-full bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm page-break-inside-avoid">
         <h4 className="text-sm font-bold text-zinc-800 mb-4 flex items-center">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
-          출입구별 접근성 비교 (Bar Chart)
+          <span className={`w-2 h-2 rounded-full ${isS1 ? 'bg-blue-500' : 'bg-emerald-500'} mr-2`}></span>
+          {isS1 ? '보행로 접근성 비교' : '출입구별 접근성 비교'} (Bar Chart)
         </h4>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-            <XAxis dataKey="name" tick={{fontSize: 10, fill: '#71717a'}} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-            <YAxis domain={[0, 100]} tick={{fontSize: 10, fill: '#71717a'}} axisLine={false} tickLine={false} />
-            <Tooltip 
-              cursor={{fill: '#f4f4f5'}}
-              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-            />
-            {globalAvg !== undefined && <ReferenceLine y={globalAvg} stroke="#9ca3af" strokeDasharray="3 3" label={{ position: 'top', value: `전체평균(${Math.round(globalAvg)}점)`, fill: '#9ca3af', fontSize: 10 }} />}
-            <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
-            <Bar isAnimationActive={false} dataKey="avgScore" name="점수" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="w-full overflow-x-auto overflow-y-hidden pb-2 custom-scrollbar">
+          <div style={{ minWidth: '100%', width: Math.max(100, chartData.length * 35), height: chartHeight }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: dynamicBottomMargin }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{fontSize: 10, fill: '#71717a'}} 
+                  interval={0} 
+                  angle={-45} 
+                  textAnchor="end"
+                  axisLine={false} 
+                  tickLine={false} 
+                />
+                <YAxis domain={[0, 100]} tick={{fontSize: 10, fill: '#71717a'}} axisLine={false} tickLine={false} />
+                <Tooltip 
+                  cursor={{fill: '#f4f4f5'}}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                {globalAvg !== undefined && <ReferenceLine y={globalAvg} stroke="#9ca3af" strokeDasharray="3 3" label={{ position: 'top', value: `전체평균(${Math.round(globalAvg)}점)`, fill: '#9ca3af', fontSize: 10 }} />}
+                <ReferenceLine y={zoneAvg} stroke="#f59e0b" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: `구역평균(${Math.round(zoneAvg)}점)`, fill: '#f59e0b', fontSize: 10 }} />
+                <Bar isAnimationActive={false} dataKey="avgScore" name="점수" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.avgScore < 100 ? '#ef4444' : (isS1 ? "#3b82f6" : "#10b981")} 
+                      className="hover:opacity-80 transition-opacity"
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
     );
   }
