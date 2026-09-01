@@ -72,7 +72,7 @@ export default function CategoryDetailCharts({ facilities, categoryScores, measu
 
   const bottomThreshold = rankingData.length > 3 ? rankingData[rankingData.length - 3].score : 100;
   const catName = selectedCategory.split('_')[1];
-  const maxNameLength = rankingData.length > 0 ? Math.max(...rankingData.map(d => d.name.length)) : 0;
+  const maxNameLength = rankingData.length > 0 ? Math.max(...rankingData.map(d => (d.name || '').length)) : 0;
   const dynamicBottomMargin = Math.max(40, maxNameLength * 11);
   const chartHeight = 220 + dynamicBottomMargin;
 

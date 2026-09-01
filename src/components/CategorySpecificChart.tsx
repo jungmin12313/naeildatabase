@@ -20,7 +20,7 @@ export default function CategorySpecificChart({ category, data, globalAvg }: Cat
     const zoneAvg = chartData.length > 0 ? chartData.reduce((sum, d) => sum + d.avgScore, 0) / chartData.length : 0;
     
     // Calculate dynamic bottom margin to prevent long name truncation
-    const maxNameLength = chartData.length > 0 ? Math.max(...chartData.map(d => d.name.length)) : 0;
+    const maxNameLength = chartData.length > 0 ? Math.max(...chartData.map(d => (d.name || '').length)) : 0;
     const dynamicBottomMargin = Math.max(40, maxNameLength * 11);
     const chartHeight = 220 + dynamicBottomMargin;
 
