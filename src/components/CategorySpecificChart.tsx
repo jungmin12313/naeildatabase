@@ -21,7 +21,7 @@ export default function CategorySpecificChart({ category, data, globalAvg }: Cat
     
     // Calculate dynamic bottom margin to prevent long name truncation
     const maxNameLength = chartData.length > 0 ? Math.max(...chartData.map(d => d.name.length)) : 0;
-    const dynamicBottomMargin = Math.max(40, maxNameLength * 6);
+    const dynamicBottomMargin = Math.max(40, maxNameLength * 11);
     const chartHeight = 220 + dynamicBottomMargin;
 
     return (

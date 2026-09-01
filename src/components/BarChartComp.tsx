@@ -70,7 +70,7 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
   // Identify bottom N (e.g., bottom 3)
   const bottomThreshold = chartData.length > 3 ? chartData[chartData.length - 3].score : 100;
   const maxNameLength = chartData.length > 0 ? Math.max(...chartData.map(d => d.name.length)) : 0;
-  const dynamicBottomMargin = Math.max(40, maxNameLength * 6);
+  const dynamicBottomMargin = Math.max(40, maxNameLength * 11);
   const chartHeight = 220 + dynamicBottomMargin;
   const rankingTitle = selectedCategory === "ALL" ? "종합 접근성 순위" : `${selectedCategory.split('_')[1]} 시설 순위`;
 
@@ -156,6 +156,5 @@ export default function BarChartComp({ facilities, categoryScores, selectedCateg
         </div>
       </div>
     </div>
-  </div>
   );
 }

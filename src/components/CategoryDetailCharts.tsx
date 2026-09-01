@@ -72,6 +72,9 @@ export default function CategoryDetailCharts({ facilities, categoryScores, measu
 
   const bottomThreshold = rankingData.length > 3 ? rankingData[rankingData.length - 3].score : 100;
   const catName = selectedCategory.split('_')[1];
+  const maxNameLength = rankingData.length > 0 ? Math.max(...rankingData.map(d => d.name.length)) : 0;
+  const dynamicBottomMargin = Math.max(40, maxNameLength * 11);
+  const chartHeight = 220 + dynamicBottomMargin;
 
   return (
     <div className="w-full space-y-6">
@@ -129,11 +132,11 @@ export default function CategoryDetailCharts({ facilities, categoryScores, measu
           {catName} 전체 시설 순위 (가로 스크롤)
         </h4>
         <div className="w-full overflow-x-auto overflow-y-hidden pb-2 custom-scrollbar">
-          <div style={{ minWidth: '100%', width: Math.max(100, rankingData.length * 35) }} className="h-56">
+          <div style={{ minWidth: '100%', width: Math.max(100, rankingData.length * 35), height: chartHeight }}>
             <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={rankingData} 
-              margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
+              margin={{ top: 10, right: 10, left: -20, bottom: dynamicBottomMargin }}
             >
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
               <XAxis 

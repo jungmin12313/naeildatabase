@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { MockData } from '@/app/page';
 import RadarChartComp from './RadarChartComp';
 import BarChartComp from './BarChartComp';
@@ -101,7 +101,7 @@ export default function Sidebar({
       try {
         const currentSubIds = editForm.map(s => s.id);
         const oldSubIds = (z.subZones || []).map((s: any) => s.id);
-        const removedIds = oldSubIds.filter(id => !currentSubIds.includes(id));
+        const removedIds = oldSubIds.filter((id: any) => !currentSubIds.includes(id));
         
         if (removedIds.length > 0) {
           await supabase.from('sub_zones').delete().in('id', removedIds);
@@ -219,7 +219,7 @@ export default function Sidebar({
                   onUpdateZones(newZones as any);
                   
                   // Immediate Sync to Supabase
-                  supabase.from('sub_zones').upsert(newSub, { onConflict: 'id' }).catch(err => console.error(err));
+                  supabase.from('sub_zones').upsert(newSub, { onConflict: 'id' }).then(res => res, (err: any) => console.error(err));
                   
                   const targetZone = newZones.find(z => z.id === drawingTargetZoneId);
                   if (targetZone) {
@@ -655,7 +655,7 @@ export default function Sidebar({
                 </div>
               </div>
               <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2 print:max-h-none print:overflow-visible print:space-y-0 print:grid print:grid-cols-2 print:gap-1.5 print:mt-2">
-                {ranking.map((f, i) => {
+                {ranking.map((f: any, i: number) => {
                   const getRankColorClasses = (score: number) => {
                     if (score >= 80) return { bg: 'bg-blue-50/50 hover:bg-blue-50 border-blue-100 hover:border-blue-300', numBg: 'bg-blue-100 text-blue-700', text: 'text-blue-700' };
                     if (score >= 50) return { bg: 'bg-orange-50/50 hover:bg-orange-50 border-orange-100 hover:border-orange-300', numBg: 'bg-orange-100 text-orange-700', text: 'text-orange-700' };
