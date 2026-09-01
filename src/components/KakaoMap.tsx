@@ -168,7 +168,7 @@ export default function KakaoMap({
         ))}
 
       {zones.map((zone) => {
-        if (!zone.polygon || !zone.polygon.coordinates || zone.polygon.coordinates.length === 0) return null;
+        if (!zone?.polygon?.coordinates?.[0]) return null;
         
         // PostGIS Polygon format: [[[lng, lat], [lng, lat], ...]]
         // Kakao Polygon expects: [{lat, lng}, {lat, lng}, ...]
@@ -214,7 +214,7 @@ export default function KakaoMap({
 
             {/* Render subzones if this zone is selected OR if it is being drawn on */}
             {(isSelected || (isDrawingMode && drawingTargetZoneId === zone.id)) && (zone as any).subZones && (zone as any).subZones.map((sub: any) => {
-              if (!sub.polygon || !sub.polygon.coordinates || sub.polygon.coordinates.length === 0) return null;
+              if (!sub?.polygon?.coordinates?.[0]?.[0]) return null;
               
               const subPath = sub.polygon.coordinates[0][0].map((coord: number[]) => ({
                 lat: coord[1],

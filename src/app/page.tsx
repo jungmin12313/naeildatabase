@@ -137,7 +137,9 @@ export default function Home() {
   let displayFacilities = zoneFacilities;
   if (selectedSubZoneId === 'unassigned') {
     // @ts-ignore
-    const allSubZonePolygons = (selectedZone?.subZones || []).map(s => s.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })));
+    const allSubZonePolygons = (selectedZone?.subZones || [])
+      .filter((s: any) => s?.polygon?.coordinates?.[0]?.[0])
+      .map((s: any) => s.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] })));
     displayFacilities = zoneFacilities.filter(f => {
       if (!f.location) return false;
       const pt = { lat: f.location.lat, lng: f.location.lng };
@@ -145,7 +147,7 @@ export default function Home() {
     });
   } else if (selectedSubZone) {
     // @ts-ignore
-    if (selectedSubZone.polygon) {
+    if (selectedSubZone?.polygon?.coordinates?.[0]?.[0]) {
       // @ts-ignore
       const poly = selectedSubZone.polygon.coordinates[0][0].map((coord: number[]) => ({ lat: coord[1], lng: coord[0] }));
       displayFacilities = zoneFacilities.filter(f => f.location && isPointInPolygon({ lat: f.location.lat, lng: f.location.lng }, poly));
