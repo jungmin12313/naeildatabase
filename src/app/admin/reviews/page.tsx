@@ -9,17 +9,14 @@ export default function AdminReviews() {
   const { role } = useAuth();
   const [mounted, setMounted] = useState(false);
   // Simulate DB state with local state
-  const [texts, setTexts] = useState(() => 
-    mockData.diagnosisTexts.map((t, index) => ({
-      ...t,
-      // Simulate created_at for testing: 
-      // Make some items older than 7 days, some newer.
-      created_at: new Date(Date.now() - (index % 3 === 0 ? 8 : 2) * 24 * 60 * 60 * 1000).toISOString()
-    }))
-  );
+  const [texts, setTexts] = useState<any[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    setTexts(mockData.diagnosisTexts.map((t, index) => ({
+      ...t,
+      created_at: new Date(Date.now() - (index % 3 === 0 ? 8 : 2) * 24 * 60 * 60 * 1000).toISOString()
+    })));
   }, []);
 
   if (!mounted) return null;
@@ -36,10 +33,11 @@ export default function AdminReviews() {
 
   const pendingReviews = texts.filter(t => t.review_status === '확인필요');
   
+  const now = Date.now();
   // Sort: over 7 days first, then by date descending
   const sortedReviews = [...pendingReviews].sort((a, b) => {
-    const aDays = (Date.now() - new Date(a.created_at).getTime()) / (1000 * 60 * 60 * 24);
-    const bDays = (Date.now() - new Date(b.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    const aDays = (now - new Date(a.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    const bDays = (now - new Date(b.created_at).getTime()) / (1000 * 60 * 60 * 24);
     const aUrgent = aDays >= 7 ? 1 : 0;
     const bUrgent = bDays >= 7 ? 1 : 0;
     
@@ -85,7 +83,7 @@ export default function AdminReviews() {
             ) : (
               sortedReviews.map(review => {
                 const facility = mockData.facilities.find(f => f.id === review.facility_id);
-                const daysOld = Math.floor((Date.now() - new Date(review.created_at).getTime()) / (1000 * 60 * 60 * 24));
+                const daysOld = Math.floor((now - new Date(review.created_at).getTime()) / (1000 * 60 * 60 * 24));
                 const isUrgent = daysOld >= 7;
 
                 return (

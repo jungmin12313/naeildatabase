@@ -58,7 +58,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.path || (pathname.startsWith(item.path) && item.path !== '/admin');
+            const currentPath = pathname || '';
+            const isActive = currentPath === item.path || (currentPath.startsWith(item.path) && item.path !== '/admin');
             
             return (
               <Link key={item.path} href={item.path}>
