@@ -13,6 +13,7 @@ import { getColorForGrade, getColorForScore } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { isPointInPolygon } from '@/utils/geo';
 import { COVERAGE_THRESHOLD } from '@/config/constants';
+import { getNormalizedCategoryScores } from '@/utils/scoring';
 
 interface SidebarProps {
   data: MockData;
@@ -68,15 +69,19 @@ export default function Sidebar({
   // @ts-ignore
   const selectedSubZone = selectedZone?.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
 
-  const confirmedFacilityIds = useMemo(() => {
-    return displayFacilities.filter(f => {
-      const c = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null).length;
-      return c >= COVERAGE_THRESHOLD;
-    }).map(f => f.id);
+  const normalizedScores = useMemo(() => {
+    return getNormalizedCategoryScores(displayFacilities, data.categoryScores);
   }, [displayFacilities, data.categoryScores]);
 
+  const confirmedFacilityIds = useMemo(() => {
+    return displayFacilities.filter(f => {
+      const c = normalizedScores.filter(cs => cs.facility_id === f.id && cs.isMeasured).length;
+      return c >= COVERAGE_THRESHOLD;
+    }).map(f => f.id);
+  }, [displayFacilities, normalizedScores]);
+
   const { zoneScores, avgScores, radarData } = useMemo(() => {
-    const scores = data.categoryScores.filter(cs => confirmedFacilityIds.includes(cs.facility_id));
+    const scores = normalizedScores.filter(cs => confirmedFacilityIds.includes(cs.facility_id));
     const avgs: Record<string, { total: number, count: number }> = {
       'S1_보행로': { total: 0, count: 0 },
       'S2_출입구': { total: 0, count: 0 },
@@ -104,22 +109,22 @@ export default function Sidebar({
     });
 
     return { zoneScores: scores, avgScores: avgs, radarData: radar };
-  }, [data.categoryScores, displayFacilities]);
+  }, [normalizedScores, confirmedFacilityIds]);
 
   const { rankingTitle, ranking, preliminaryRanking } = useMemo(() => {
     let title = selectedSubZone ? `${selectedSubZone.name} 전체 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? "미지정 구역 전체 시설 접근성 순위" : "전체 시설 접근성 순위");
     const mappedRanking = displayFacilities.map(f => {
-      const allValidScores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
-      const measuredCount = allValidScores.length;
+      const allNormScores = normalizedScores.filter(cs => cs.facility_id === f.id);
+      const measuredCount = allNormScores.filter(cs => cs.isMeasured).length;
       const diagnosisTier = measuredCount >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary';
       
-      let scores = allValidScores;
+      let scores = allNormScores;
       if (selectedCategory) {
         scores = scores.filter(cs => cs.category === selectedCategory);
         title = selectedSubZone ? `${selectedSubZone.name} ${selectedCategory.split('_')[1]} 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? `미지정 구역 ${selectedCategory.split('_')[1]} 시설 접근성 순위` : `${selectedCategory.split('_')[1]} 시설 접근성 순위`);
       }
       const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
-      return { ...f, avgScore: avg, hasData: scores.length > 0, measuredCount, diagnosisTier };
+      return { ...f, avgScore: avg, hasData: measuredCount > 0, measuredCount, diagnosisTier };
     })
     .filter(f => f.hasData)
     .filter(f => searchTerm ? f.name.toLowerCase().includes(searchTerm.toLowerCase()) : true);
@@ -128,13 +133,13 @@ export default function Sidebar({
     const preliminary = mappedRanking.filter(f => f.diagnosisTier === 'preliminary').sort((a, b) => sortOrder === 'desc' ? b.avgScore - a.avgScore : a.avgScore - b.avgScore);
 
     return { rankingTitle: title, ranking: confirmed, preliminaryRanking: preliminary };
-  }, [displayFacilities, data.categoryScores, selectedCategory, selectedSubZone, selectedSubZoneId, searchTerm, sortOrder]);
+  }, [displayFacilities, normalizedScores, selectedCategory, selectedSubZone, selectedSubZoneId, searchTerm, sortOrder]);
 
   const globalAvg = useMemo(() => {
     if (!selectedCategory) return undefined;
-    const scores = data.categoryScores.filter(cs => cs.category === selectedCategory && cs.score !== null && confirmedFacilityIds.includes(cs.facility_id));
+    const scores = normalizedScores.filter(cs => cs.category === selectedCategory && cs.score !== null && confirmedFacilityIds.includes(cs.facility_id));
     return scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
-  }, [data.categoryScores, selectedCategory, confirmedFacilityIds]);
+  }, [normalizedScores, selectedCategory, confirmedFacilityIds]);
 
   const coveragePercent = useMemo(() => {
     if (displayFacilities.length === 0) return 0;

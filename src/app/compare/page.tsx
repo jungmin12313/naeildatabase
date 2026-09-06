@@ -10,6 +10,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
+import { getNormalizedCategoryScores } from '@/utils/scoring';
 
 export default function CompareDashboard() {
   const { role, assignedZoneId } = useAuth();
@@ -45,7 +46,7 @@ export default function CompareDashboard() {
       let zoneName = mockData.zones.find(z => z.id === zid)?.name;
       const isSubZone = !zoneName && mockData.zones.some(z => z.subZones?.some((sz: any) => sz.id === zid));
       
-      let zoneFacilities = [];
+      let zoneFacilities: any[] = [];
       let displayName = zoneName || '알 수 없음';
 
       if (isSubZone) {
@@ -57,10 +58,13 @@ export default function CompareDashboard() {
         zoneFacilities = mockData.facilities.filter(f => f.zone_id === zid);
       }
       
+      const normalizedScores = getNormalizedCategoryScores(zoneFacilities, mockData.categoryScores);
+
       const facilityScores = zoneFacilities.map(f => {
-        const scores = mockData.categoryScores.filter(s => s.facility_id === f.id && s.score !== null);
-        const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
-        return { ...f, avgScore: avg, measuredCount: scores.length, diagnosisTier: scores.length >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary' };
+        const allNormScores = normalizedScores.filter(s => s.facility_id === f.id);
+        const measuredCount = allNormScores.filter(s => s.isMeasured).length;
+        const avg = allNormScores.length > 0 ? allNormScores.reduce((sum, s) => sum + s.score, 0) / allNormScores.length : 0;
+        return { ...f, avgScore: avg, measuredCount, diagnosisTier: measuredCount >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary' };
       });
 
       const confirmed = facilityScores.filter(f => f.diagnosisTier === 'confirmed');
@@ -75,7 +79,7 @@ export default function CompareDashboard() {
         'S5_주차장': { total: 0, count: 0 },
       };
       
-      const confirmedScores = mockData.categoryScores.filter(cs => confirmed.some(f => f.id === cs.facility_id));
+      const confirmedScores = normalizedScores.filter(cs => confirmed.some(f => f.id === cs.facility_id));
       confirmedScores.forEach(s => {
         if (s.score !== null && avgs[s.category]) {
           avgs[s.category].total += s.score;
