@@ -7,7 +7,7 @@ import { useEffect, useState, useMemo } from 'react';
 import * as xlsx from 'xlsx';
 import { COVERAGE_THRESHOLD } from '@/config/constants';
 import RadarChartComp from '@/components/RadarChartComp';
-import { getNormalizedCategoryScores } from '@/utils/scoring';
+import { getNormalizedCategoryScores, getZoneRadarData } from '@/utils/scoring';
 
 export default function Dashboard() {
   const { role, assignedZoneId } = useAuth();
@@ -69,35 +69,8 @@ export default function Dashboard() {
   });
 
   const { radarData } = useMemo(() => {
-    const scores = normalizedScores.filter(cs => confirmedFacilities.some(f => f.id === cs.facility_id));
-    const avgs: Record<string, { total: number, count: number }> = {
-      'S1_보행로': { total: 0, count: 0 },
-      'S2_출입구': { total: 0, count: 0 },
-      'S3_화장실': { total: 0, count: 0 },
-      'S4_엘리베이터': { total: 0, count: 0 },
-      'S5_주차장': { total: 0, count: 0 },
-    };
-
-    scores.forEach(s => {
-      if (s.score !== null && avgs[s.category]) {
-        avgs[s.category].total += s.score;
-        avgs[s.category].count++;
-      }
-    });
-
-    const radar = Object.keys(avgs).map(cat => {
-      const realScore = avgs[cat].count > 0 ? Math.round(avgs[cat].total / avgs[cat].count) : 0;
-      return {
-        id: cat,
-        subject: cat.split('_')[1],
-        A: realScore,
-        visualA: realScore < 5 ? 5 : realScore, // minimum for rendering
-        fullMark: 100
-      };
-    });
-
-    return { radarData: radar };
-  }, [confirmedFacilities, normalizedScores]);
+    return { radarData: getZoneRadarData(confirmedFacilities, mockData.categoryScores) };
+  }, [confirmedFacilities, mockData.categoryScores]);
 
   const coveragePercent = facilities.length > 0 ? Math.round((confirmedFacilities.length / facilities.length) * 100) : 0;
 

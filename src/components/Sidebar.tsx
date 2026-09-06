@@ -13,7 +13,7 @@ import { getColorForGrade, getColorForScore } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { isPointInPolygon } from '@/utils/geo';
 import { COVERAGE_THRESHOLD } from '@/config/constants';
-import { getNormalizedCategoryScores } from '@/utils/scoring';
+import { getNormalizedCategoryScores, getZoneRadarData } from '@/utils/scoring';
 
 interface SidebarProps {
   data: MockData;
@@ -80,7 +80,11 @@ export default function Sidebar({
     }).map(f => f.id);
   }, [displayFacilities, data.categoryScores]);
 
-  const { zoneScores, avgScores, radarData } = useMemo(() => {
+  const radarData = useMemo(() => {
+    return getZoneRadarData(displayFacilities, data.categoryScores);
+  }, [displayFacilities]);
+
+  const { zoneScores, avgScores } = useMemo(() => {
     const scores = normalizedScores.filter(cs => confirmedFacilityIds.includes(cs.facility_id));
     const avgs: Record<string, { total: number, count: number }> = {
       'S1_보행로': { total: 0, count: 0 },
@@ -97,18 +101,7 @@ export default function Sidebar({
       }
     });
 
-    const radar = Object.keys(avgs).map(cat => {
-      const realScore = avgs[cat].count > 0 ? Math.round(avgs[cat].total / avgs[cat].count) : 0;
-      return {
-        id: cat,
-        subject: cat.split('_')[1],
-        A: realScore,
-        visualA: realScore < 5 ? 5 : realScore, // minimum 5 for visual area rendering
-        fullMark: 100
-      };
-    });
-
-    return { zoneScores: scores, avgScores: avgs, radarData: radar };
+    return { zoneScores: scores, avgScores: avgs };
   }, [normalizedScores, confirmedFacilityIds]);
 
   const { rankingTitle, ranking, preliminaryRanking } = useMemo(() => {

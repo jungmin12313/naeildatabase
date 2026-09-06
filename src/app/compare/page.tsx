@@ -10,7 +10,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
-import { getNormalizedCategoryScores } from '@/utils/scoring';
+import { getNormalizedCategoryScores, getZoneRadarData } from '@/utils/scoring';
 
 export default function CompareDashboard() {
   const { role, assignedZoneId } = useAuth();
@@ -70,25 +70,10 @@ export default function CompareDashboard() {
       const coverage = zoneFacilities.length > 0 ? Math.round((confirmed.length / zoneFacilities.length) * 100) : 0;
       const overallAvg = confirmed.length > 0 ? confirmed.reduce((sum, f) => sum + f.avgScore, 0) / confirmed.length : 0;
 
-      const avgs: Record<string, { total: number, count: number }> = {
-        'S1_보행로': { total: 0, count: 0 },
-        'S2_출입구': { total: 0, count: 0 },
-        'S3_화장실': { total: 0, count: 0 },
-        'S4_엘리베이터': { total: 0, count: 0 },
-        'S5_주차장': { total: 0, count: 0 },
-      };
-      
-      const confirmedScores = normalizedScores.filter(cs => confirmed.some(f => f.id === cs.facility_id));
-      confirmedScores.forEach(s => {
-        if (s.score !== null && avgs[s.category]) {
-          avgs[s.category].total += s.score;
-          avgs[s.category].count++;
-        }
-      });
-
+      const radarForZone = getZoneRadarData(confirmed, mockData.categoryScores);
       const catScores: Record<string, number> = {};
-      Object.keys(avgs).forEach(cat => {
-        catScores[cat] = avgs[cat].count > 0 ? Math.round(avgs[cat].total / avgs[cat].count) : 0;
+      radarForZone.forEach(r => {
+        catScores[r.id] = r.A;
       });
 
       return { id: zid, name: displayName, facilities: zoneFacilities, confirmed, coverage, overallAvg, catScores };
