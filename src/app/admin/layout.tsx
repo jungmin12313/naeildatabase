@@ -18,12 +18,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted && isAuthLoaded && role === 'viewer') {
-      router.push('/');
-    }
-  }, [role, router, mounted, isAuthLoaded]);
-
   if (!mounted || !isAuthLoaded) {
     return (
       <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center text-zinc-500">
