@@ -61,7 +61,9 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
                         
                         let criteriaStr = '';
                         if (!isNotes) {
-                          if (key.includes('유효폭') || key.includes('너비')) {
+                          if (key === '유효폭 5m 이상') {
+                            criteriaStr = '';
+                          } else if (key.includes('유효폭') || key.includes('너비')) {
                             if (catName.includes('보행로')) criteriaStr = '1.2m 이상';
                             else if (catName.includes('화장실')) criteriaStr = '0.9m 이상';
                             else criteriaStr = '0.9m 이상';

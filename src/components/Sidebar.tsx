@@ -12,6 +12,7 @@ const CategorySpecificChart = dynamic(() => import('./CategorySpecificChart'), {
 import { getColorForGrade, getColorForScore } from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { isPointInPolygon } from '@/utils/geo';
+import { COVERAGE_THRESHOLD } from '@/config/constants';
 
 interface SidebarProps {
   data: MockData;
@@ -67,8 +68,15 @@ export default function Sidebar({
   // @ts-ignore
   const selectedSubZone = selectedZone?.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
 
+  const confirmedFacilityIds = useMemo(() => {
+    return displayFacilities.filter(f => {
+      const c = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null).length;
+      return c >= COVERAGE_THRESHOLD;
+    }).map(f => f.id);
+  }, [displayFacilities, data.categoryScores]);
+
   const { zoneScores, avgScores, radarData } = useMemo(() => {
-    const scores = data.categoryScores.filter(cs => displayFacilities.some(f => f.id === cs.facility_id));
+    const scores = data.categoryScores.filter(cs => confirmedFacilityIds.includes(cs.facility_id));
     const avgs: Record<string, { total: number, count: number }> = {
       'S1_보행로': { total: 0, count: 0 },
       'S2_출입구': { total: 0, count: 0 },
@@ -98,29 +106,53 @@ export default function Sidebar({
     return { zoneScores: scores, avgScores: avgs, radarData: radar };
   }, [data.categoryScores, displayFacilities]);
 
-  const { rankingTitle, ranking } = useMemo(() => {
+  const { rankingTitle, ranking, preliminaryRanking } = useMemo(() => {
     let title = selectedSubZone ? `${selectedSubZone.name} 전체 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? "미지정 구역 전체 시설 접근성 순위" : "전체 시설 접근성 순위");
     const mappedRanking = displayFacilities.map(f => {
-      let scores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+      const allValidScores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+      const measuredCount = allValidScores.length;
+      const diagnosisTier = measuredCount >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary';
+      
+      let scores = allValidScores;
       if (selectedCategory) {
         scores = scores.filter(cs => cs.category === selectedCategory);
         title = selectedSubZone ? `${selectedSubZone.name} ${selectedCategory.split('_')[1]} 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? `미지정 구역 ${selectedCategory.split('_')[1]} 시설 접근성 순위` : `${selectedCategory.split('_')[1]} 시설 접근성 순위`);
       }
       const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
-      return { ...f, avgScore: avg, hasData: scores.length > 0 };
+      return { ...f, avgScore: avg, hasData: scores.length > 0, measuredCount, diagnosisTier };
     })
     .filter(f => f.hasData)
-    .filter(f => searchTerm ? f.name.toLowerCase().includes(searchTerm.toLowerCase()) : true)
-    .sort((a, b) => sortOrder === 'desc' ? b.avgScore - a.avgScore : a.avgScore - b.avgScore);
+    .filter(f => searchTerm ? f.name.toLowerCase().includes(searchTerm.toLowerCase()) : true);
+    
+    const confirmed = mappedRanking.filter(f => f.diagnosisTier === 'confirmed').sort((a, b) => sortOrder === 'desc' ? b.avgScore - a.avgScore : a.avgScore - b.avgScore);
+    const preliminary = mappedRanking.filter(f => f.diagnosisTier === 'preliminary').sort((a, b) => sortOrder === 'desc' ? b.avgScore - a.avgScore : a.avgScore - b.avgScore);
 
-    return { rankingTitle: title, ranking: mappedRanking };
+    return { rankingTitle: title, ranking: confirmed, preliminaryRanking: preliminary };
   }, [displayFacilities, data.categoryScores, selectedCategory, selectedSubZone, selectedSubZoneId, searchTerm, sortOrder]);
 
   const globalAvg = useMemo(() => {
     if (!selectedCategory) return undefined;
-    const scores = data.categoryScores.filter(cs => cs.category === selectedCategory && cs.score !== null);
+    const scores = data.categoryScores.filter(cs => cs.category === selectedCategory && cs.score !== null && confirmedFacilityIds.includes(cs.facility_id));
     return scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
-  }, [data.categoryScores, selectedCategory]);
+  }, [data.categoryScores, selectedCategory, confirmedFacilityIds]);
+
+  const coveragePercent = useMemo(() => {
+    if (displayFacilities.length === 0) return 0;
+    return Math.round((confirmedFacilityIds.length / displayFacilities.length) * 100);
+  }, [displayFacilities.length, confirmedFacilityIds.length]);
+
+  const calculatedFinalIndex = useMemo(() => {
+    const s1 = avgScores['S1_보행로']?.count > 0 ? avgScores['S1_보행로'].total / avgScores['S1_보행로'].count : 50;
+    const s2 = avgScores['S2_출입구']?.count > 0 ? avgScores['S2_출입구'].total / avgScores['S2_출입구'].count : 50;
+    const s3 = avgScores['S3_화장실']?.count > 0 ? avgScores['S3_화장실'].total / avgScores['S3_화장실'].count : 50;
+    const s4 = avgScores['S4_엘리베이터']?.count > 0 ? avgScores['S4_엘리베이터'].total / avgScores['S4_엘리베이터'].count : 50;
+    const s5 = avgScores['S5_주차장']?.count > 0 ? avgScores['S5_주차장'].total / avgScores['S5_주차장'].count : 50;
+    
+    if (confirmedFacilityIds.length === 0) return null;
+
+    const finalRaw = (s1 * s2 + s2 * s3 + s3 * s4 + s4 * s5 + s5 * s1) / 500;
+    return finalRaw;
+  }, [avgScores, confirmedFacilityIds.length]);
 
   const handleStartEdit = (z: any) => {
     setEditingZoneId(z.id);
@@ -535,11 +567,11 @@ export default function Sidebar({
           </div>
           <div className="text-right">
             <div className="text-xs text-zinc-500 mb-1">{selectedSubZone ? '구역 넓이지수' : '최종 넓이지수'}</div>
-            <div className="text-2xl font-bold" style={{ color: getColorForScore(selectedSubZone ? (selectedSubZone.final_index as number | null) : (selectedZone.final_index as number | null)) }}>
-              {selectedSubZone 
-                ? (selectedSubZone.final_index !== null ? Number(selectedSubZone.final_index).toFixed(1) : '-')
-                : (selectedZone.final_index !== null ? (selectedZone.final_index as number).toFixed(1) : '-')}
+            <div className="text-2xl font-bold" style={{ color: getColorForScore(calculatedFinalIndex) }}>
+              {calculatedFinalIndex !== null ? calculatedFinalIndex.toFixed(1) : '-'}
             </div>
+            <div className="text-[10px] text-zinc-400 mt-0.5 whitespace-nowrap">정밀진단 시설 기준</div>
+            <div className="text-[10px] text-blue-500 font-bold mt-0.5 whitespace-nowrap">커버리지: {coveragePercent}% ({confirmedFacilityIds.length}/{displayFacilities.length})</div>
           </div>
         </div>
       </div>
@@ -657,7 +689,7 @@ export default function Sidebar({
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col mb-4 gap-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-zinc-900">{rankingTitle}</h3>
+                  <h3 className="text-lg font-bold text-zinc-900">{rankingTitle} <span className="text-sm font-normal text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">(정밀진단 기준)</span></h3>
                   <span className="text-sm text-zinc-500">조사된 시설 {ranking.length}곳</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
@@ -713,6 +745,8 @@ export default function Sidebar({
                 })}
               </div>
             </section>
+            
+
 
             {/* Specific Category Charts (Custom Visualization) */}
             <section className="animate-in fade-in slide-in-from-bottom-8 duration-500 mt-8 print:hidden">
