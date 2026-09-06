@@ -1,0 +1,114 @@
+{
+  "facilities_details": [
+    {
+      "id": "f_1",
+      "doc_number": "NAEIL-T1-2026-001",
+      "overview": {
+        "name": "kt대리점",
+        "address": "광주광역시 북구 전대후문로 123",
+        "sub_facilities": "주차장, 주출입구, 1층 매장",
+        "purpose": "장애인 편의시설 실태조사 및 개선안 도출",
+        "law": "장애인등편의법 시행규칙 별표1",
+        "survey_date": "2026-08-17",
+        "survey_tool": "모두의내일 AppSheet Data Collector",
+        "report_date": "2026-09-06",
+        "author": "주식회사 모두의내일"
+      },
+      "master_db_results": [
+        {
+          "category": "매개시설",
+          "item": "주출입구 접근로 유효폭",
+          "measured_value": "1.1m",
+          "legal_standard": "1.2m 이상",
+          "status": "부적합",
+          "law_ref": "별표1 제1호 가목",
+          "is_applicable": true
+        },
+        {
+          "category": "매개시설",
+          "item": "주출입구 단차",
+          "measured_value": "단차 없음 (경사로 설치)",
+          "legal_standard": "2cm 이하 또는 경사로",
+          "status": "적합",
+          "law_ref": "별표1 제1호 다목",
+          "is_applicable": true
+        },
+        {
+          "category": "내부시설",
+          "item": "출입문 통과 유효폭",
+          "measured_value": "0.85m",
+          "legal_standard": "0.9m 이상",
+          "status": "부적합",
+          "law_ref": "별표1 제2호 가목",
+          "is_applicable": true
+        },
+        {
+          "category": "위생시설",
+          "item": "장애인 전용 화장실",
+          "measured_value": "설치되지 않음",
+          "legal_standard": "1개소 이상 설치",
+          "status": "해당없음",
+          "law_ref": "별표1 제3호",
+          "is_applicable": false,
+          "na_reason": "바닥면적 300㎡ 미만 소규모 근린생활시설로 설치 의무 대상 아님"
+        },
+        {
+          "category": "안내시설",
+          "item": "점자블록 설치",
+          "measured_value": "미설치",
+          "legal_standard": "주출입구 0.3m 전면 설치",
+          "status": "부적합",
+          "law_ref": "별표1 제4호",
+          "is_applicable": true
+        }
+      ],
+      "improvements": [
+        {
+          "item": "주출입구 접근로 유효폭",
+          "law_ref": "별표1 제1호 가목",
+          "problem": "현재 유효폭이 1.1m로 휠체어 교행 기준(1.2m)에 미달함.",
+          "guide": "통행에 방해가 되는 진입로 우측의 적치물을 제거하여 최소 1.2m 이상의 유효폭을 상시 확보해야 합니다."
+        },
+        {
+          "item": "출입문 통과 유효폭",
+          "law_ref": "별표1 제2호 가목",
+          "problem": "양개문 중 한쪽 문만 개방 시 유효폭이 0.85m로 기준(0.9m) 미달.",
+          "guide": "자동문으로 교체하거나, 평상시 양쪽 문을 모두 개방할 수 있도록 고정 장치를 설치해야 합니다."
+        },
+        {
+          "item": "점자블록 설치",
+          "law_ref": "별표1 제4호",
+          "problem": "주출입구 전면에 시각장애인 유도용 점자블록이 없음.",
+          "guide": "출입문 전면 0.3m 위치에 출입문의 폭만큼 점형 점자블록을 매립 설치해야 합니다."
+        }
+      ],
+      "budget": [
+        {
+          "item": "점자블록 매립 시공",
+          "quantity": "2m",
+          "unit_price": 80000,
+          "basis": "점자블록 자재비 및 인건비 포함",
+          "total": 160000
+        },
+        {
+          "item": "자동문 설치 (옵션)",
+          "quantity": "1식",
+          "unit_price": 2500000,
+          "basis": "기존 유리문 철거 및 센서형 자동문 설치",
+          "total": 2500000
+        }
+      ],
+      "photos": [
+        {
+          "url": "/mock_photos/entrance.jpg",
+          "caption": "주출입구 휠체어 접근 현황 (단차 없음)"
+        },
+        {
+          "url": "/mock_photos/door.jpg",
+          "caption": "출입문 통과 유효폭 측정 현장 (0.85m)"
+        }
+      ],
+      "conclusion": "본 시설은 주출입구의 단차가 제거되어 있어 휠체어 접근성이 양호하나, 출입문 유효폭 및 점자블록 설치 등 세부 규격에서 일부 부적합 요소가 발견되었습니다. 제안된 개선 가이드에 따라 소규모 수선을 진행한다면 교통약자의 편의성이 크게 향상될 것으로 판단됩니다."
+    }
+  ]
+}
