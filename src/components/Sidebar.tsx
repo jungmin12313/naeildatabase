@@ -321,16 +321,36 @@ export default function Sidebar({
   }
 
   if (!selectedZone) {
+    const getGroupedZones = () => {
+      if (role === 'admin') {
+        return [{ groupName: '전체 관할 구역 (관리자 권한)', zones: data.zones }];
+      } else if (role === 'official') {
+        const myZones = data.zones.filter(z => z.id === assignedZoneId);
+        const otherZones = data.zones.filter(z => z.id !== assignedZoneId);
+        return [
+          { groupName: '내 관할 구역 (수정 권한)', zones: myZones },
+          { groupName: '타 관할 구역 (공개 데이터 열람)', zones: otherZones }
+        ].filter(g => g.zones.length > 0);
+      } else {
+        return [{ groupName: '조사된 구역 목록 (공개 데이터 열람)', zones: data.zones }];
+      }
+    };
+
+    const groupedZones = getGroupedZones();
+
     return (
       <div className="flex flex-col h-full print:block print:h-auto">
         <div className="p-6 border-b border-zinc-200 bg-white sticky top-0 z-10 print:hidden">
-          <h2 className="text-xl font-bold text-zinc-900 mb-1">조사된 구역 목록</h2>
+          <h2 className="text-xl font-bold text-zinc-900 mb-1">접속 권한 및 구역 목록</h2>
           <p className="text-sm text-zinc-500">클릭하여 해당 구역의 세부 데이터를 확인하세요.</p>
         </div>
         <div className="flex-1 overflow-y-auto p-4 bg-zinc-50 print:overflow-visible">
-          <div className="space-y-3">
-            {data.zones.map((z) => {
-              const score = z.final_index as number | null;
+          <div className="space-y-6">
+            {groupedZones.map((group, gIdx) => (
+              <div key={gIdx} className="space-y-3">
+                <h3 className="text-xs font-bold text-blue-600 tracking-wider pl-1 border-b border-zinc-200 pb-2">{group.groupName}</h3>
+                {group.zones.map((z) => {
+                  const score = z.final_index as number | null;
               const mainColor = getColorForScore(score);
               const isExpanded = expandedZoneId === z.id;
               
@@ -462,6 +482,8 @@ export default function Sidebar({
                 </div>
               );
             })}
+              </div>
+            ))}
           </div>
         </div>
       </div>
