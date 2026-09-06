@@ -11,7 +11,6 @@ export default function Tier1Report({ params }: { params: Promise<{ id: string }
   const { id } = resolvedParams;
 
   const detail = tier1Mock.facilities_details.find(d => d.id === id);
-  const baseData = mockDataRaw.facilities.find(f => f.id === id);
 
   if (!detail) {
     return <div className="p-8 text-center text-zinc-500">리포트 데이터를 찾을 수 없습니다.</div>;
@@ -226,7 +225,7 @@ export default function Tier1Report({ params }: { params: Promise<{ id: string }
             {/* 해당없음 사유 */}
             {detail.master_db_results.filter(r => !r.is_applicable).length > 0 && (
               <div className="bg-zinc-50 border border-zinc-200 p-4 rounded text-xs text-zinc-600">
-                <span className="font-bold text-zinc-800">※ '해당없음' 판정 사유 (시설 적용성 매트릭스 판정 근거):</span>
+                <span className="font-bold text-zinc-800">※ &apos;해당없음&apos; 판정 사유 (시설 적용성 매트릭스 판정 근거):</span>
                 <ul className="list-disc pl-5 mt-2 space-y-1">
                   {detail.master_db_results.filter(r => !r.is_applicable).map((r, i) => (
                     <li key={i}>[{r.item}] {r.na_reason}</li>
@@ -301,10 +300,8 @@ export default function Tier1Report({ params }: { params: Promise<{ id: string }
             <div className="grid grid-cols-2 gap-6">
               {detail.photos.map((photo, i) => (
                 <div key={i} className="flex flex-col border border-zinc-200 rounded bg-white page-break-inside-avoid">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <div className="aspect-video bg-zinc-100 flex items-center justify-center overflow-hidden border-b border-zinc-200 relative">
                     <span className="text-zinc-400 text-xs absolute">이미지 불러오는 중...</span>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={photo.url} alt="현장 사진" className="w-full h-full object-cover z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   </div>
                   <div className="p-3 text-center text-sm font-medium text-zinc-800">
@@ -336,7 +333,7 @@ export default function Tier1Report({ params }: { params: Promise<{ id: string }
 
             <div>
               <h3 className="font-bold text-zinc-800 mb-2">B. 적용대상 항목 선별(Screening) 로직 설명</h3>
-              <p className="leading-relaxed">본 진단은 98개 규격마스터DB 중 대상 시설의 유형(근린생활시설, 판매시설 등), 규모(바닥면적), 부속시설 존치 여부에 따라 법적 설치 의무가 있는 항목만을 선별(Screening)하여 진단하였습니다. '해당없음'으로 분류된 항목은 설치 의무가 없거나 물리적으로 존재하지 않는 시설입니다.</p>
+              <p className="leading-relaxed">본 진단은 98개 규격마스터DB 중 대상 시설의 유형(근린생활시설, 판매시설 등), 규모(바닥면적), 부속시설 존치 여부에 따라 법적 설치 의무가 있는 항목만을 선별(Screening)하여 진단하였습니다. &apos;해당없음&apos;으로 분류된 항목은 설치 의무가 없거나 물리적으로 존재하지 않는 시설입니다.</p>
             </div>
 
             <div>

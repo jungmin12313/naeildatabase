@@ -1,16 +1,26 @@
 'use client';
 
 import { Bell, Repeat } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import mockDataRaw from '@/data/mock.json';
 
 export default function Tier5Dashboard() {
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const [targets, setTargets] = useState<any[]>([]);
+  const [mounted, setMounted] = useState(false);
 
-  const targets = mockDataRaw.facilities.filter(f => {
-    if (!f.last_survey_date) return true;
-    return new Date(f.last_survey_date) < sixMonthsAgo;
-  });
+  useEffect(() => {
+    setMounted(true);
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const filtered = mockDataRaw.facilities.filter(f => {
+      if (!f.last_survey_date) return true;
+      return new Date(f.last_survey_date) < sixMonthsAgo;
+    });
+    setTargets(filtered);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <div className="p-8">
