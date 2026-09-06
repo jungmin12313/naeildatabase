@@ -17,13 +17,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     setMounted(true);
     if (role === 'viewer') {
-      alert('접근 권한이 없습니다.');
       router.push('/');
     }
   }, [role, router]);
 
-  if (!mounted) return null;
-  if (role === 'viewer') return null;
+  if (!mounted || role === 'viewer') {
+    return <div className="min-h-screen bg-zinc-50 flex items-center justify-center text-zinc-500">권한 확인 중...</div>;
+  }
 
   const menuItems = [
     { name: '홈 (통합 현황)', path: '/admin', icon: LayoutDashboard },
