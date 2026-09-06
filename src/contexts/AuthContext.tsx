@@ -7,14 +7,15 @@ export type Role = 'viewer' | 'official' | 'admin';
 interface AuthContextType {
   role: Role;
   setRole: (role: Role) => void;
-  // In a real app, official would be tied to specific zone_ids
   assignedZoneId: string | null; 
+  isAuthLoaded: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role>('viewer');
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
   
   // For MVP, we assign 'z_1' to officials for testing
   const assignedZoneId = role === 'official' ? 'z_1' : null;
@@ -23,8 +24,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem('mock_role');
     if (saved === 'viewer' || saved === 'official' || saved === 'admin') {
-      setRole(saved);
+      setRole(saved as Role);
     }
+    setIsAuthLoaded(true);
   }, []);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ role, setRole: handleSetRole, assignedZoneId }}>
+    <AuthContext.Provider value={{ role, setRole: handleSetRole, assignedZoneId, isAuthLoaded }}>
       {children}
       
       {/* Floating Mock Auth Switcher for Dev/MVP */}

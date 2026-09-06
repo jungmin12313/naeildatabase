@@ -2,14 +2,21 @@
 
 import { Shield, Database, Clock, Search } from 'lucide-react';
 import auditData from '@/data/audit_mock.json';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function SettingsDashboard() {
+  const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const filteredLogs = auditData.filter(log => 
     log.target_data.includes(searchTerm) || log.operator.includes(searchTerm) || log.action_type.includes(searchTerm)
   );
+
+  if (!mounted) return null;
 
   return (
     <div className="p-8">

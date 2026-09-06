@@ -9,22 +9,34 @@ import {
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { role, setRole } = useAuth();
+  const { role, setRole, isAuthLoaded } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    if (role === 'viewer') {
+  }, []);
+
+  useEffect(() => {
+    if (mounted && isAuthLoaded && role === 'viewer') {
       router.push('/');
     }
-  }, [role, router]);
+  }, [role, router, mounted, isAuthLoaded]);
 
-  if (!mounted || role === 'viewer') {
+  if (!mounted || !isAuthLoaded) {
     return (
       <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center text-zinc-500">
-        <p className="mb-4 text-lg">권한 확인 중이거나 접근 권한이 없습니다.</p>
+        <p className="mb-4 text-lg">권한 확인 중...</p>
+        <div style={{ display: 'none' }}>{children}</div>
+      </div>
+    );
+  }
+
+  if (role === 'viewer') {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center text-zinc-500">
+        <p className="mb-4 text-lg">접근 권한이 없습니다.</p>
         <button onClick={() => router.push('/')} className="px-4 py-2 bg-blue-600 text-white rounded">홈으로 돌아가기</button>
         <div style={{ display: 'none' }}>{children}</div>
       </div>
