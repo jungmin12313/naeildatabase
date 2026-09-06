@@ -83,8 +83,10 @@ export default function Dashboard() {
     const radar = Object.keys(avgs).map(cat => {
       const realScore = avgs[cat].count > 0 ? Math.round(avgs[cat].total / avgs[cat].count) : 0;
       return {
+        id: cat,
         subject: cat.split('_')[1],
         A: realScore,
+        visualA: realScore < 5 ? 5 : realScore, // minimum for rendering
         fullMark: 100
       };
     });
@@ -284,7 +286,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col items-center justify-center p-6 print:border-zinc-300">
             <h3 className="text-lg font-bold text-zinc-900 mb-4 self-start">카테고리별 접근성 균형</h3>
             <div className="w-full h-64 relative">
-              <RadarChartComp data={radarData} showLabels={true} />
+              <RadarChartComp data={radarData} onCategoryClick={() => {}} />
             </div>
           </div>
 

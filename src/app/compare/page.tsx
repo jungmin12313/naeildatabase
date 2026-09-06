@@ -52,7 +52,7 @@ export default function CompareDashboard() {
         const parentZone = mockData.zones.find(z => z.subZones?.some((sz: any) => sz.id === zid));
         const sz = parentZone?.subZones?.find((s: any) => s.id === zid);
         displayName = sz?.name || '알 수 없음';
-        zoneFacilities = mockData.facilities.filter(f => f.sub_zone_id === zid || (f.zone_id === parentZone?.id && sz?.name === '전대후문' /* fallback */));
+        zoneFacilities = mockData.facilities.filter(f => (f as any).sub_zone_id === zid || (f.zone_id === parentZone?.id && sz?.name === '전대후문' /* fallback */));
       } else {
         zoneFacilities = mockData.facilities.filter(f => f.zone_id === zid);
       }
