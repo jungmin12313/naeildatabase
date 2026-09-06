@@ -45,10 +45,9 @@ export default function Dashboard() {
 
   // Statistics
   const facilityScores = facilities.map(f => {
-    const allNormScores = normalizedScores.filter(s => s.facility_id === f.id);
-    const measuredCount = allNormScores.filter(s => s.isMeasured).length;
-    const avg = allNormScores.length > 0 ? allNormScores.reduce((sum, s) => sum + s.score, 0) / allNormScores.length : 0;
-    return { ...f, avgScore: avg, measuredCount, diagnosisTier: measuredCount >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary' };
+    const scores = mockData.categoryScores.filter(s => s.facility_id === f.id && s.score !== null);
+    const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
+    return { ...f, avgScore: avg, measuredCount: scores.length, diagnosisTier: scores.length >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary' };
   });
 
   const confirmedFacilities = facilityScores.filter(f => f.diagnosisTier === 'confirmed');
@@ -130,12 +129,12 @@ export default function Dashboard() {
 
     // 2. 시설상세 (Details)
     const detailsData = facilityScores.map(f => {
-      const fScores = normalizedScores.filter(s => s.facility_id === f.id);
-      const s1 = fScores.find(s => s.category === 'S1_보행로');
-      const s2 = fScores.find(s => s.category === 'S2_출입구');
-      const s3 = fScores.find(s => s.category === 'S3_화장실');
-      const s4 = fScores.find(s => s.category === 'S4_엘리베이터');
-      const s5 = fScores.find(s => s.category === 'S5_주차장');
+      const fScores = mockData.categoryScores.filter(s => s.facility_id === f.id);
+      const s1 = fScores.find(s => s.category === 'S1_보행로')?.score;
+      const s2 = fScores.find(s => s.category === 'S2_출입구')?.score;
+      const s3 = fScores.find(s => s.category === 'S3_화장실')?.score;
+      const s4 = fScores.find(s => s.category === 'S4_엘리베이터')?.score;
+      const s5 = fScores.find(s => s.category === 'S5_주차장')?.score;
 
       return {
         '시설명': f.name,
@@ -145,11 +144,11 @@ export default function Dashboard() {
         '측정 카테고리 수': f.measuredCount,
         '최근 점검일': f.last_survey_date || '미점검',
         '평균 점수': f.avgScore.toFixed(1),
-        '보행로 점수': s1 ? s1.score.toFixed(1) + (s1.isMeasured ? '' : ' (대체)') : '-',
-        '출입구 점수': s2 ? s2.score.toFixed(1) + (s2.isMeasured ? '' : ' (대체)') : '-',
-        '화장실 점수': s3 ? s3.score.toFixed(1) + (s3.isMeasured ? '' : ' (대체)') : '-',
-        '승강기 점수': s4 ? s4.score.toFixed(1) + (s4.isMeasured ? '' : ' (대체)') : '-',
-        '주차장 점수': s5 ? s5.score.toFixed(1) + (s5.isMeasured ? '' : ' (대체)') : '-'
+        '보행로 점수': s1 !== undefined && s1 !== null ? s1.toFixed(1) : '-',
+        '출입구 점수': s2 !== undefined && s2 !== null ? s2.toFixed(1) : '-',
+        '화장실 점수': s3 !== undefined && s3 !== null ? s3.toFixed(1) : '-',
+        '승강기 점수': s4 !== undefined && s4 !== null ? s4.toFixed(1) : '-',
+        '주차장 점수': s5 !== undefined && s5 !== null ? s5.toFixed(1) : '-'
       };
     });
     const ws2 = xlsx.utils.json_to_sheet(detailsData);

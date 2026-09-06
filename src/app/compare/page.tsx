@@ -61,10 +61,9 @@ export default function CompareDashboard() {
       const normalizedScores = getNormalizedCategoryScores(zoneFacilities, mockData.categoryScores);
 
       const facilityScores = zoneFacilities.map(f => {
-        const allNormScores = normalizedScores.filter(s => s.facility_id === f.id);
-        const measuredCount = allNormScores.filter(s => s.isMeasured).length;
-        const avg = allNormScores.length > 0 ? allNormScores.reduce((sum, s) => sum + s.score, 0) / allNormScores.length : 0;
-        return { ...f, avgScore: avg, measuredCount, diagnosisTier: measuredCount >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary' };
+        const scores = mockData.categoryScores.filter(s => s.facility_id === f.id && s.score !== null);
+        const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
+        return { ...f, avgScore: avg, measuredCount: scores.length, diagnosisTier: scores.length >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary' };
       });
 
       const confirmed = facilityScores.filter(f => f.diagnosisTier === 'confirmed');

@@ -75,10 +75,10 @@ export default function Sidebar({
 
   const confirmedFacilityIds = useMemo(() => {
     return displayFacilities.filter(f => {
-      const c = normalizedScores.filter(cs => cs.facility_id === f.id && cs.isMeasured).length;
+      const c = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null).length;
       return c >= COVERAGE_THRESHOLD;
     }).map(f => f.id);
-  }, [displayFacilities, normalizedScores]);
+  }, [displayFacilities, data.categoryScores]);
 
   const { zoneScores, avgScores, radarData } = useMemo(() => {
     const scores = normalizedScores.filter(cs => confirmedFacilityIds.includes(cs.facility_id));
@@ -114,17 +114,17 @@ export default function Sidebar({
   const { rankingTitle, ranking, preliminaryRanking } = useMemo(() => {
     let title = selectedSubZone ? `${selectedSubZone.name} 전체 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? "미지정 구역 전체 시설 접근성 순위" : "전체 시설 접근성 순위");
     const mappedRanking = displayFacilities.map(f => {
-      const allNormScores = normalizedScores.filter(cs => cs.facility_id === f.id);
-      const measuredCount = allNormScores.filter(cs => cs.isMeasured).length;
+      const allValidScores = data.categoryScores.filter(cs => cs.facility_id === f.id && cs.score !== null);
+      const measuredCount = allValidScores.length;
       const diagnosisTier = measuredCount >= COVERAGE_THRESHOLD ? 'confirmed' : 'preliminary';
       
-      let scores = allNormScores;
+      let scores = allValidScores;
       if (selectedCategory) {
         scores = scores.filter(cs => cs.category === selectedCategory);
         title = selectedSubZone ? `${selectedSubZone.name} ${selectedCategory.split('_')[1]} 시설 접근성 순위` : (selectedSubZoneId === 'unassigned' ? `미지정 구역 ${selectedCategory.split('_')[1]} 시설 접근성 순위` : `${selectedCategory.split('_')[1]} 시설 접근성 순위`);
       }
       const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
-      return { ...f, avgScore: avg, hasData: measuredCount > 0, measuredCount, diagnosisTier };
+      return { ...f, avgScore: avg, hasData: scores.length > 0, measuredCount, diagnosisTier };
     })
     .filter(f => f.hasData)
     .filter(f => searchTerm ? f.name.toLowerCase().includes(searchTerm.toLowerCase()) : true);
@@ -133,13 +133,13 @@ export default function Sidebar({
     const preliminary = mappedRanking.filter(f => f.diagnosisTier === 'preliminary').sort((a, b) => sortOrder === 'desc' ? b.avgScore - a.avgScore : a.avgScore - b.avgScore);
 
     return { rankingTitle: title, ranking: confirmed, preliminaryRanking: preliminary };
-  }, [displayFacilities, normalizedScores, selectedCategory, selectedSubZone, selectedSubZoneId, searchTerm, sortOrder]);
+  }, [displayFacilities, data.categoryScores, selectedCategory, selectedSubZone, selectedSubZoneId, searchTerm, sortOrder]);
 
   const globalAvg = useMemo(() => {
     if (!selectedCategory) return undefined;
-    const scores = normalizedScores.filter(cs => cs.category === selectedCategory && cs.score !== null && confirmedFacilityIds.includes(cs.facility_id));
+    const scores = data.categoryScores.filter(cs => cs.category === selectedCategory && cs.score !== null && confirmedFacilityIds.includes(cs.facility_id));
     return scores.length > 0 ? scores.reduce((sum, s) => sum + (s.score || 0), 0) / scores.length : 0;
-  }, [normalizedScores, selectedCategory, confirmedFacilityIds]);
+  }, [data.categoryScores, selectedCategory, confirmedFacilityIds]);
 
   const coveragePercent = useMemo(() => {
     if (displayFacilities.length === 0) return 0;
