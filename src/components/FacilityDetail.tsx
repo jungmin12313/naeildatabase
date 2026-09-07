@@ -71,7 +71,7 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
                     <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">세부 실측 수치 및 특이사항</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {Object.entries(rawMetrics).map(([key, value]) => {
-                        if (!value && value !== 0) return null;
+                        if (value === null || value === undefined || value === '') return null;
                         const isNotes = key === '비고' || key === '특이사항';
                         
                         let criteriaStr = '';
