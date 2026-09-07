@@ -399,21 +399,21 @@ export default function Dashboard() {
                 const s5 = fScores.find(s => s.category === 'S5_주차장')?.score;
 
                 const getColor = (score: number | null | undefined) => {
-                  if (score === null || score === undefined) return 'text-zinc-300';
-                  if (score >= 80) return 'text-blue-600';
-                  if (score >= 50) return 'text-orange-500';
-                  return 'text-red-600';
+                  if (score === null || score === undefined) return 'text-zinc-400 font-normal';
+                  if (score >= 80) return 'text-blue-600 font-bold';
+                  if (score >= 50) return 'text-orange-600 font-bold';
+                  return 'text-red-600 font-bold';
                 };
                 
                 return (
                   <tr key={f.id} className="border-b border-zinc-200">
                     <td className="py-2 px-2 font-bold text-zinc-900 truncate max-w-[140px]">{f.name}</td>
                     <td className="py-2 px-2 font-medium text-zinc-700">{f.facility_type}</td>
-                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s1)}`}>{s1 !== undefined && s1 !== null ? s1.toFixed(0) : '-'}</td>
-                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s2)}`}>{s2 !== undefined && s2 !== null ? s2.toFixed(0) : '-'}</td>
-                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s3)}`}>{s3 !== undefined && s3 !== null ? s3.toFixed(0) : '-'}</td>
-                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s4)}`}>{s4 !== undefined && s4 !== null ? s4.toFixed(0) : '-'}</td>
-                    <td className={`py-2 px-2 text-center font-semibold ${getColor(s5)}`}>{s5 !== undefined && s5 !== null ? s5.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center ${getColor(s1)}`}>{s1 !== undefined && s1 !== null ? s1.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center ${getColor(s2)}`}>{s2 !== undefined && s2 !== null ? s2.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center ${getColor(s3)}`}>{s3 !== undefined && s3 !== null ? s3.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center ${getColor(s4)}`}>{s4 !== undefined && s4 !== null ? s4.toFixed(0) : '-'}</td>
+                    <td className={`py-2 px-2 text-center ${getColor(s5)}`}>{s5 !== undefined && s5 !== null ? s5.toFixed(0) : '-'}</td>
                     <td className={`py-2 px-2 text-right font-black ${getColor(f.avgScore)}`}>{f.avgScore.toFixed(1)}</td>
                   </tr>
                 );
