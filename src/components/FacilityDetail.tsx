@@ -29,7 +29,7 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
           if (!scoreObj || scoreObj.score === null) return null;
           const catName = scoreObj.category.split('_')[1];
           
-          let rawMetrics: Record<string, string | number> = {};
+          let rawMetrics: Record<string, any> = {};
           // @ts-ignore
           if (scoreObj.reason) {
             try {
@@ -39,6 +39,21 @@ export default function FacilityDetail({ facility, scores }: FacilityDetailProps
               // Not JSON
             }
           }
+
+          // DB의 실측 데이터(measurements)를 최우선으로 병합 (reason에 누락된 항목 복원)
+          const catMeasurements = measurements.filter(m => m.category === scoreObj.category);
+          catMeasurements.forEach(m => {
+             let formattedVal = m.value;
+             if (typeof m.value === 'boolean') {
+               formattedVal = m.value ? '있음 (O)' : '없음 (X)';
+             } else if (m.value !== null && m.unit && !String(m.value).includes(m.unit)) {
+               formattedVal = `${m.value}${m.unit}`;
+             }
+             // 값이 존재하면 덮어쓰거나 새로 추가
+             if (formattedVal !== null && formattedVal !== undefined && formattedVal !== '') {
+               rawMetrics[m.field_name] = formattedVal;
+             }
+          });
 
           return (
             <section key={scoreObj.id} className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm print:break-inside-avoid">
