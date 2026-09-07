@@ -13,7 +13,7 @@ import {
 import { getNormalizedCategoryScores, getZoneRadarData } from '@/utils/scoring';
 
 export default function CompareDashboard() {
-  const { role, assignedZoneId } = useAuth();
+  const { role, assignedZoneId, isAuthLoaded } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [selectedZoneIds, setSelectedZoneIds] = useState<string[]>([]);
   const [zonesData, setZonesData] = useState<any[]>([]);
@@ -184,7 +184,22 @@ export default function CompareDashboard() {
 
   const colors = ['#2563eb', '#dc2626', '#16a34a', '#d97706'];
 
-  if (!mounted) return null;
+  if (!mounted || !isAuthLoaded) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center text-zinc-500">
+        <p className="mb-4 text-lg">권한 확인 중...</p>
+      </div>
+    );
+  }
+
+  if (role === 'viewer') {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-8 text-center">
+        <AlertTriangle size={48} className="text-zinc-300 mb-4" />
+        <h2 className="text-2xl font-bold text-zinc-900">권한이 없습니다</h2>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 p-8 font-sans print:bg-white print:p-0">

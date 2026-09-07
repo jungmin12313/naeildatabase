@@ -10,25 +10,14 @@ import RadarChartComp from '@/components/RadarChartComp';
 import { getNormalizedCategoryScores, getZoneRadarData } from '@/utils/scoring';
 
 export default function Dashboard() {
-  const { role, assignedZoneId } = useAuth();
+  const { role, assignedZoneId, isAuthLoaded } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
 
-  if (role === 'viewer') {
-    return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-8 text-center">
-        <AlertTriangle size={48} className="text-zinc-300 mb-4" />
-        <h2 className="text-2xl font-bold text-zinc-900">권한이 없습니다</h2>
-        <p className="mt-2 text-zinc-500">지자체 담당자 또는 내부 운영자 계정으로 로그인해주세요.</p>
-        <p className="mt-4 text-xs text-zinc-400">우측 하단의 Role Switcher를 통해 권한을 변경할 수 있습니다.</p>
-      </div>
-    );
-  }
 
   // Filter facilities based on role
   const facilities = role === 'official' && assignedZoneId
@@ -154,6 +143,25 @@ export default function Dashboard() {
 
     xlsx.writeFile(workbook, `공공시설물_접근성_진단데이터_${zoneName}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
+
+  if (!mounted || !isAuthLoaded) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center text-zinc-500">
+        <p className="mb-4 text-lg">권한 확인 중...</p>
+      </div>
+    );
+  }
+
+  if (role === 'viewer') {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-8 text-center">
+        <AlertTriangle size={48} className="text-zinc-300 mb-4" />
+        <h2 className="text-2xl font-bold text-zinc-900">권한이 없습니다</h2>
+        <p className="mt-2 text-zinc-500">지자체 담당자 또는 내부 운영자 계정으로 로그인해주세요.</p>
+        <p className="mt-4 text-xs text-zinc-400">우측 하단의 Role Switcher를 통해 권한을 변경할 수 있습니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 p-8 font-sans print:bg-white print:p-0">
