@@ -746,15 +746,7 @@ export default function Sidebar({
             
 
 
-            {/* Specific Category Charts (Custom Visualization) */}
-            <section className="animate-in fade-in slide-in-from-bottom-8 duration-500 mt-8 print:hidden">
-              <CategorySpecificChart
-                category={selectedCategory}
-                data={ranking}
-                globalAvg={globalAvg}
-              />
-            </section>
-            
+
             {/* Selected Category Specific Chart */}
             <section className="block mt-8 w-full print:page-break-before-always">
               <h3 className="text-xl font-bold text-zinc-900 mb-6 text-center border-b-2 pb-2">{selectedCategory.split('_')[1]} 시각화 리포트</h3>
@@ -767,7 +759,7 @@ export default function Sidebar({
 
                 return catRanking.length > 0 ? (
                   <div key={cat} className="page-break-inside-avoid">
-                    <CategorySpecificChart category={cat} data={catRanking} />
+                    <CategorySpecificChart category={cat} data={catRanking} globalAvg={globalAvg} />
                   </div>
                 ) : null;
               })}

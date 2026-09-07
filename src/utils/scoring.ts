@@ -35,8 +35,9 @@ export function getZoneRadarData(facilities: any[], rawCategoryScores: any[]) {
     }
   });
 
-  // Fallback average for categories with NO data at all in this zone
-  const fallbackAvg = globalCount > 0 ? globalTotal / globalCount : 0;
+  // Fallback average for categories with NO data at all
+  // ONLY impute if we are dealing with a zone (multiple facilities). For a single facility, unmeasured is 0.
+  const fallbackAvg = (facilities.length > 1 && globalCount > 0) ? (globalTotal / globalCount) : 0;
 
   const radar = categories.map(cat => {
     const realScore = realScores[cat] !== null ? Math.round(realScores[cat] as number) : Math.round(fallbackAvg);

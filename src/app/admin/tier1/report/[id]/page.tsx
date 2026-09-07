@@ -56,7 +56,7 @@ export default function Tier1Report({ params }: { params: Promise<{ id: string }
           <div className="flex justify-between items-start border-b-2 border-indigo-900 pb-4">
             <div>
               <div className="text-xl font-bold tracking-tighter text-indigo-900">모두의내일</div>
-              <div className="text-xs text-zinc-500 mt-1">Tier 1 미니 진단 보고서</div>
+              <div className="text-xs text-zinc-500 mt-1 font-bold">Tier 1 | Mini Diagnostic Report</div>
             </div>
             <div className="text-right text-xs text-zinc-500">
               <p>문서번호: {detail.doc_number}</p>
@@ -85,13 +85,15 @@ export default function Tier1Report({ params }: { params: Promise<{ id: string }
 
           {/* Title Area */}
           <div className="flex-1 flex flex-col items-center justify-center -mt-20">
-            <div className="px-8 py-2 border-2 border-indigo-900 rounded-full text-indigo-900 font-bold tracking-widest mb-8">
-              정밀 진단보고서
-            </div>
-            <h1 className="text-4xl font-extrabold text-center leading-tight">
-              {detail.overview.name}<br/>
-              장애인 접근성 실태 진단
+            <h2 className="text-3xl font-extrabold text-center leading-tight mb-4 text-zinc-800">
+              {detail.overview.name}
+            </h2>
+            <h1 className="text-5xl font-black text-center leading-tight tracking-tight text-indigo-900 mb-6">
+              장애인시설 접근성 실태 진단보고서
             </h1>
+            <div className="px-6 py-2 border-2 border-indigo-900 rounded-full text-indigo-900 font-bold tracking-widest text-sm">
+              Tier 1 | Mini Diagnostic Report (교통약자법 시행규칙 별표1~3 전 항목 대상)
+            </div>
           </div>
 
           {/* Footer Area */}
@@ -188,7 +190,10 @@ export default function Tier1Report({ params }: { params: Promise<{ id: string }
 
           {/* 3. 항목별 상세 실측 결과 */}
           <section className="mb-12">
-            <h2 className="text-xl font-bold text-indigo-900 border-b-2 border-indigo-900 pb-2 mb-4">3. 항목별 상세 실측 결과</h2>
+            <h2 className="text-xl font-bold text-indigo-900 border-b-2 border-indigo-900 pb-2 mb-2">3. 항목별 상세 실측 결과 (전체 적용항목 대상)</h2>
+            <p className="text-xs text-zinc-500 font-medium mb-4">
+              * 지역/유형 요약점수(S1~S5 5대 카테고리)가 아닌, 시행규칙 별표1~3 규격마스터DB 중 대상 시설에 실제 적용되는 핵심 항목 전체를 단답형으로 나열함
+            </p>
             <table className="w-full border-collapse text-sm mb-4">
               <thead className="bg-zinc-100 border-t-2 border-b-2 border-zinc-400">
                 <tr>
@@ -291,7 +296,7 @@ export default function Tier1Report({ params }: { params: Promise<{ id: string }
                 </tr>
               </tbody>
             </table>
-            <p className="text-xs text-zinc-500 text-right">* 상기 예산은 현장 여건 및 시공 방법에 따라 변동될 수 있습니다.</p>
+            <p className="text-xs text-zinc-500 text-right">※ 아래 견적은 부적합 항목 {totalFail}개소에 대한 개략 공사비이며 실제 시공 견적과 상이할 수 있음</p>
           </section>
 
           {/* 6. 현장 사진 */}
