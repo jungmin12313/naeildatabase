@@ -370,26 +370,26 @@ export default function Dashboard() {
         <div className="block mt-8 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm print:bg-transparent print:p-0 print:border-none print:shadow-none page-break-avoid">
           <div className="border-b-2 border-zinc-100 print:border-zinc-900 pb-4 print:pb-2 mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
             <h3 className="text-lg font-bold text-zinc-900">전체 시설 현황 및 카테고리별 요약</h3>
-            <div className="flex space-x-3 text-xs font-medium pb-1">
+            <div className="flex space-x-3 text-xs font-medium pb-1 text-zinc-700">
               <div className="flex items-center"><span className="w-2.5 h-2.5 bg-blue-600 rounded-full mr-1.5"></span>우수 (80점 이상)</div>
               <div className="flex items-center"><span className="w-2.5 h-2.5 bg-orange-500 rounded-full mr-1.5"></span>보통 (50~79점)</div>
               <div className="flex items-center"><span className="w-2.5 h-2.5 bg-red-600 rounded-full mr-1.5"></span>미흡 (50점 미만)</div>
             </div>
           </div>
-          <table className="w-full text-left border-collapse text-[11px]">
+          <table className="w-full text-left border-collapse text-[11px] text-zinc-900">
             <thead>
-              <tr className="border-b-2 border-zinc-800 bg-zinc-50">
-                <th className="py-2 px-2">시설명</th>
-                <th className="py-2 px-2">유형</th>
-                <th className="py-2 px-2 text-center">보행로</th>
-                <th className="py-2 px-2 text-center">출입구</th>
-                <th className="py-2 px-2 text-center">화장실</th>
-                <th className="py-2 px-2 text-center">승강기</th>
-                <th className="py-2 px-2 text-center">주차장</th>
-                <th className="py-2 px-2 text-right">평균 점수</th>
+              <tr className="border-b-2 border-zinc-800 bg-zinc-50 text-zinc-900">
+                <th className="py-2 px-2 font-bold">시설명</th>
+                <th className="py-2 px-2 font-bold">유형</th>
+                <th className="py-2 px-2 text-center font-bold">보행로</th>
+                <th className="py-2 px-2 text-center font-bold">출입구</th>
+                <th className="py-2 px-2 text-center font-bold">화장실</th>
+                <th className="py-2 px-2 text-center font-bold">승강기</th>
+                <th className="py-2 px-2 text-center font-bold">주차장</th>
+                <th className="py-2 px-2 text-right font-bold">평균 점수</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-zinc-800">
               {facilityScores.map(f => {
                 const fScores = mockData.categoryScores.filter(s => s.facility_id === f.id);
                 const s1 = fScores.find(s => s.category === 'S1_보행로')?.score;
@@ -399,7 +399,7 @@ export default function Dashboard() {
                 const s5 = fScores.find(s => s.category === 'S5_주차장')?.score;
 
                 const getColor = (score: number | null | undefined) => {
-                  if (score === null || score === undefined) return 'text-zinc-400';
+                  if (score === null || score === undefined) return 'text-zinc-300';
                   if (score >= 80) return 'text-blue-600';
                   if (score >= 50) return 'text-orange-500';
                   return 'text-red-600';
@@ -407,8 +407,8 @@ export default function Dashboard() {
                 
                 return (
                   <tr key={f.id} className="border-b border-zinc-200">
-                    <td className="py-2 px-2 font-semibold truncate max-w-[140px]">{f.name}</td>
-                    <td className="py-2 px-2 text-zinc-600">{f.facility_type}</td>
+                    <td className="py-2 px-2 font-bold text-zinc-900 truncate max-w-[140px]">{f.name}</td>
+                    <td className="py-2 px-2 font-medium text-zinc-700">{f.facility_type}</td>
                     <td className={`py-2 px-2 text-center font-semibold ${getColor(s1)}`}>{s1 !== undefined && s1 !== null ? s1.toFixed(0) : '-'}</td>
                     <td className={`py-2 px-2 text-center font-semibold ${getColor(s2)}`}>{s2 !== undefined && s2 !== null ? s2.toFixed(0) : '-'}</td>
                     <td className={`py-2 px-2 text-center font-semibold ${getColor(s3)}`}>{s3 !== undefined && s3 !== null ? s3.toFixed(0) : '-'}</td>
