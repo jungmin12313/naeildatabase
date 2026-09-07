@@ -84,7 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 <a href="/dashboard" className="text-blue-600 hover:underline">대시보드</a>
               )}
               {role === 'admin' && (
-                <a href="/admin/reviews" className="text-blue-600 hover:underline">AI 검수</a>
+                <>
+                  <a href="/admin" className="text-purple-600 hover:underline font-bold">운영자 홈</a>
+                  <a href="/admin/reviews" className="text-blue-600 hover:underline">AI 검수</a>
+                </>
               )}
             </div>
             
