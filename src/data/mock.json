@@ -82,10 +82,20 @@
       "location": {
         "lat": 0,
         "lng": 0
-      }
+      },
+      "last_survey_date": "2026-09-09"
     }
   ],
-  "measurements": [],
+  "measurements": [
+    {
+      "id": "m_dummy",
+      "facility_id": "f_dummy",
+      "category": "S1_보행로",
+      "field_name": "dummy",
+      "value": "dummy",
+      "unit": "dummy"
+    }
+  ],
   "categoryScores": [
     {
       "id": "cs_dummy",
@@ -95,5 +105,12 @@
       "reason": "{}"
     }
   ],
-  "diagnosisTexts": []
+  "diagnosisTexts": [
+    {
+      "id": "d_dummy",
+      "facility_id": "f_dummy",
+      "category": "S1_보행로",
+      "text": "dummy text"
+    }
+  ]
 }

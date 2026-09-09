@@ -32,12 +32,34 @@ export default function Dashboard() {
   });
 
   const confirmedFacilities = facilityScores.filter(f => f.diagnosisTier === 'confirmed');
+  const avgScores: Record<string, { total: number, count: number }> = {
+    'S1_보행로': { total: 0, count: 0 },
+    'S2_출입구': { total: 0, count: 0 },
+    'S3_화장실': { total: 0, count: 0 },
+    'S4_엘리베이터': { total: 0, count: 0 },
+    'S5_주차장': { total: 0, count: 0 },
+  };
+
+  const confirmedIds = confirmedFacilities.map(f => f.id);
+  const confirmedScores = mockData.categoryScores.filter(s => confirmedIds.includes(s.facility_id));
+  
+  confirmedScores.forEach(s => {
+    if (s.score !== null && avgScores[s.category]) {
+      avgScores[s.category].total += s.score;
+      avgScores[s.category].count++;
+    }
+  });
+
+  const s1 = avgScores['S1_보행로']?.count > 0 ? avgScores['S1_보행로'].total / avgScores['S1_보행로'].count : 50;
+  const s2 = avgScores['S2_출입구']?.count > 0 ? avgScores['S2_출입구'].total / avgScores['S2_출입구'].count : 50;
+  const s3 = avgScores['S3_화장실']?.count > 0 ? avgScores['S3_화장실'].total / avgScores['S3_화장실'].count : 50;
+  const s4 = avgScores['S4_엘리베이터']?.count > 0 ? avgScores['S4_엘리베이터'].total / avgScores['S4_엘리베이터'].count : 50;
+  const s5 = avgScores['S5_주차장']?.count > 0 ? avgScores['S5_주차장'].total / avgScores['S5_주차장'].count : 50;
+
+  const finalRaw = (s1 * s2 + s2 * s3 + s3 * s4 + s4 * s5 + s5 * s1) / 500;
+  const overallAvg = confirmedFacilities.length > 0 ? finalRaw : 0;
+
   const preliminaryFacilities = facilityScores.filter(f => f.diagnosisTier === 'preliminary');
-
-  const overallAvg = confirmedFacilities.length > 0
-    ? confirmedFacilities.reduce((sum, f) => sum + f.avgScore, 0) / confirmedFacilities.length
-    : 0;
-
   const bottomFacilities = [...confirmedFacilities].sort((a, b) => a.avgScore !== b.avgScore ? a.avgScore - b.avgScore : a.name.localeCompare(b.name)).slice(0, 5);
 
   // Re-diagnosis targets (last_survey_date > 6 months)
@@ -244,8 +266,9 @@ export default function Dashboard() {
               <TrendingUp size={24} />
             </div>
             <div>
-              <p className="text-[11px] md:text-xs font-semibold text-zinc-500">평균 점수 <span className="text-[10px] bg-zinc-100 text-zinc-500 px-1 py-0.5 rounded">(정밀 기준)</span></p>
+              <p className="text-[11px] md:text-xs font-semibold text-zinc-500">종합 점수 <span className="text-[10px] bg-zinc-100 text-zinc-500 px-1 py-0.5 rounded">(자체 공식)</span></p>
               <p className="text-2xl font-bold text-zinc-900">{overallAvg.toFixed(1)}점</p>
+              <p className="text-[10px] text-zinc-400">DB: s1={s1.toFixed(1)}, s2={s2.toFixed(1)}, s3={s3.toFixed(1)}, s4={s4.toFixed(1)}, s5={s5.toFixed(1)}</p>
             </div>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex items-center">

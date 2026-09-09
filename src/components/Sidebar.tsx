@@ -570,6 +570,7 @@ export default function Sidebar({
               {calculatedFinalIndex !== null ? calculatedFinalIndex.toFixed(1) : '-'}
             </div>
             <div className="text-[10px] text-zinc-400 mt-0.5 whitespace-nowrap">정밀진단 시설 기준</div>
+            <div className="text-[10px] text-zinc-400">HM: s1={(avgScores['S1_보행로']?.count > 0 ? avgScores['S1_보행로'].total / avgScores['S1_보행로'].count : 50).toFixed(1)}, s2={(avgScores['S2_출입구']?.count > 0 ? avgScores['S2_출입구'].total / avgScores['S2_출입구'].count : 50).toFixed(1)}</div>
             <div className="text-[10px] text-blue-500 font-bold mt-0.5 whitespace-nowrap">커버리지: {coveragePercent}% ({confirmedFacilityIds.length}/{displayFacilities.length})</div>
           </div>
         </div>
