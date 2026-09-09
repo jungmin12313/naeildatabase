@@ -68,16 +68,11 @@ export default function CompareDashboard() {
   }, [selectedZoneIds, mockData]);
 
   const radarData = useMemo(() => {
-    const allCategories = new Set<string>();
-    selectedZonesInfo.forEach(zi => {
-      Object.keys(zi.catScores).forEach(cat => allCategories.add(cat));
-    });
-    
-    return Array.from(allCategories).map(catId => {
-      const subject = catId.includes('_') ? catId.split('_')[1] : catId;
-      const row: any = { subject, fullMark: 100 };
+    const categories = ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'];
+    return categories.map(cat => {
+      const row: any = { subject: cat.split('_')[1], fullMark: 100 };
       selectedZonesInfo.forEach(zi => {
-        row[zi.name] = zi.catScores[catId] || 0;
+        row[zi.name] = zi.catScores[cat];
       });
       return row;
     });
@@ -85,22 +80,16 @@ export default function CompareDashboard() {
 
   const gapData = useMemo(() => {
     if (selectedZonesInfo.length < 2) return [];
-    
-    const allCategories = new Set<string>();
-    selectedZonesInfo.forEach(zi => Object.keys(zi.catScores).forEach(cat => allCategories.add(cat)));
-    
-    return Array.from(allCategories).map(catId => {
+    const categories = ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'];
+    return categories.map(cat => {
       let maxScore = -1, minScore = 101, maxZone = '', minZone = '';
       selectedZonesInfo.forEach(zi => {
-        const score = zi.catScores[catId];
-        if (score !== undefined) {
-          if (score > maxScore) { maxScore = score; maxZone = zi.name; }
-          if (score < minScore) { minScore = score; minZone = zi.name; }
-        }
+        const score = zi.catScores[cat];
+        if (score > maxScore) { maxScore = score; maxZone = zi.name; }
+        if (score < minScore) { minScore = score; minZone = zi.name; }
       });
       const gap = maxScore - minScore;
-      const subject = catId.includes('_') ? catId.split('_')[1] : catId;
-      return { category: subject, maxZone, maxScore, minZone, minScore, gap, isCritical: gap >= 20 };
+      return { category: cat.split('_')[1], maxZone, maxScore, minZone, minScore, gap, isCritical: gap >= 20 };
     });
   }, [selectedZonesInfo]);
 
