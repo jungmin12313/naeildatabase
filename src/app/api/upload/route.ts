@@ -42,25 +42,33 @@ export async function POST(request: NextRequest) {
       const lng = parseFloat(lngStr);
 
       const name = r['장소명'] || '';
-      let x1 = parseFloat(r['유효폭']) || parseFloat(r['문너비']) || parseFloat(r['문 너비']) || 0;
+      const rawX1 = r['유효폭'] ?? r['문너비'] ?? r['문 너비'];
+      const hasX1 = rawX1 !== undefined && rawX1 !== null && rawX1 !== '';
+      let x1 = hasX1 ? parseFloat(rawX1) : null;
+      if (x1 !== null) {
+        if (name.includes('한라맥주') && x1 > 90) x1 = 0.98;
+        else if (name.includes('숨바꼭질') && x1 > 8) x1 = 0.83;
+        else if (name.includes('세븐일레븐') && x1 > 8) x1 = 0.81;
+        if (x1 > 0 && x1 < 10) x1 *= 100;
+      }
       
-      // 이상치 정정
-      if (name.includes('한라맥주') && x1 > 90) x1 = 0.98;
-      else if (name.includes('숨바꼭질') && x1 > 8) x1 = 0.83;
-      else if (name.includes('세븐일레븐') && x1 > 8) x1 = 0.81;
+      const rawXH = r['가로 너비'] ?? r['가로너비'];
+      const hasXH = rawXH !== undefined && rawXH !== null && rawXH !== '';
+      let x_h = hasXH ? parseFloat(rawXH) : null;
+      if (x_h !== null && x_h > 0 && x_h < 10) x_h *= 100;
+      
+      const rawXV = r['세로 너비'] ?? r['세로너비'];
+      const hasXV = rawXV !== undefined && rawXV !== null && rawXV !== '';
+      let x_v = hasXV ? parseFloat(rawXV) : null;
+      if (x_v !== null && x_v > 0 && x_v < 10) x_v *= 100;
+      
+      const rawX2 = r['단차'];
+      const hasX2 = rawX2 !== undefined && rawX2 !== null && rawX2 !== '';
+      const x2 = hasX2 ? parseFloat(rawX2) : null;
 
-      if (x1 > 0 && x1 < 10) x1 *= 100; // convert meters to cm if needed
-      
-      let x_h = parseFloat(r['가로 너비']) || parseFloat(r['가로너비']) || 0;
-      if (x_h > 0 && x_h < 10) x_h *= 100;
-      
-      let x_v = parseFloat(r['세로 너비']) || parseFloat(r['세로너비']) || 0;
-      if (x_v > 0 && x_v < 10) x_v *= 100;
-      
-      const x2 = parseFloat(r['단차']) || 0;
-      // 기울기 값이 비어있거나 0인지 확인하기 위해 원본 값 보존
       const rawIncline = r['기울기'];
-      const x3 = parseFloat(rawIncline) || 0;
+      const hasIncline = rawIncline !== undefined && rawIncline !== null && rawIncline !== '';
+      const x3 = hasIncline ? parseFloat(rawIncline) : null;
       
       // 카테고리 매핑
       let rawCategory = r['카테고리'] || '출입구';
@@ -72,51 +80,68 @@ export async function POST(request: NextRequest) {
       else if (rawCategory.includes('주차')) mappedCategory = 'S5_주차장';
       
       // 공통 수식 (단차, 기울기)
-      const s_step = Math.min(100, Math.max(0, ((6 - x2) / (6 - 2)) * 100));
+      let s_step: number | null = null;
+      if (x2 !== null) {
+        s_step = Math.min(100, Math.max(0, ((6 - x2) / (6 - 2)) * 100));
+      }
       
-      // 기울기 점수 (단차가 2cm를 초과하는데 기울기 데이터가 없거나 0이면 위험요소이므로 0점 처리)
-      let s_slope = 0;
-      if (x2 <= 2) {
-        s_slope = 100; // 단차가 2cm 이하 평탄하면 기울기 무관 만점
-      } else {
-        if (rawIncline === undefined || rawIncline === null || rawIncline === '' || x3 === 0) {
-          s_slope = 0; // 결측이거나 0인 경우 0점 (보수적 처리)
+      let s_slope: number | null = null;
+      if (x2 !== null && x2 <= 2) {
+        if (hasIncline && x3 !== null) {
+           // 조건 C: 단차가 2cm 이하라도 기울기가 표기되어 있으면 계산
+           s_slope = Math.min(100, Math.max(0, ((14.4 - x3) / (14.4 - 4.8)) * 100));
         } else {
-          s_slope = Math.min(100, Math.max(0, ((14.4 - x3) / (14.4 - 4.8)) * 100));
+           s_slope = 100; // 단차가 2cm 이하이고 평탄함
+        }
+      } else {
+        if (hasIncline && x3 !== null) {
+           s_slope = Math.min(100, Math.max(0, ((14.4 - x3) / (14.4 - 4.8)) * 100));
         }
       }
       
-      const s_step_slope = x2 <= 2 ? 100 : (0.5 * s_step + 0.5 * s_slope);
+      let s_step_slope: number | null = null;
+      if (s_step !== null && s_slope !== null) {
+         s_step_slope = (x2 !== null && x2 <= 2 && !hasIncline) ? 100 : (0.5 * s_step + 0.5 * s_slope);
+      } else if (s_step !== null) {
+         s_step_slope = (x2 !== null && x2 <= 2) ? 100 : s_step;
+      } else if (s_slope !== null) {
+         s_step_slope = s_slope;
+      }
 
-      let fScore = 0;
+      const scoresToAverage: number[] = [];
+      const addScore = (val: number | null) => { if (val !== null && !isNaN(val)) scoresToAverage.push(val); };
 
-      // PDF 수식 적용
+      // PDF 수식 적용 (결측치 제외 평균)
       if (mappedCategory === 'S1_보행로') {
-        const s1 = Math.min(100, Math.max(0, ((x1 - 40) / (120 - 40)) * 100));
-        fScore = (1/3) * s1 + (1/3) * s_step + (1/3) * s_slope;
+        const s1 = x1 !== null ? Math.min(100, Math.max(0, ((x1 - 40) / (120 - 40)) * 100)) : null;
+        addScore(s1); addScore(s_step); addScore(s_slope);
       } 
       else if (mappedCategory === 'S2_출입구') {
-        const s_width = Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100));
-        fScore = 0.5 * s_width + 0.5 * s_step_slope;
+        const s_width = x1 !== null ? Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100)) : null;
+        addScore(s_width); addScore(s_step_slope);
       }
       else if (mappedCategory === 'S3_화장실') {
-        const s_width_h = Math.min(100, Math.max(0, ((x_h - 140/3) / (140 - 140/3)) * 100));
-        const s_width_v = Math.min(100, Math.max(0, ((x_v - 140/3) / (140 - 140/3)) * 100));
-        const s_door = Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100));
-        fScore = 0.25 * s_width_h + 0.25 * s_width_v + 0.25 * s_door + 0.25 * s_step_slope;
+        const s_width_h = x_h !== null ? Math.min(100, Math.max(0, ((x_h - 140/3) / (140 - 140/3)) * 100)) : null;
+        const s_width_v = x_v !== null ? Math.min(100, Math.max(0, ((x_v - 140/3) / (140 - 140/3)) * 100)) : null;
+        const s_door = x1 !== null ? Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100)) : null;
+        addScore(s_width_h); addScore(s_width_v); addScore(s_door); addScore(s_step_slope);
       }
       else if (mappedCategory === 'S4_엘리베이터') {
-        const s_width_h = Math.min(100, Math.max(0, ((x_h - 160/3) / (160 - 160/3)) * 100));
-        const s_width_v = Math.min(100, Math.max(0, ((x_v - 45) / (135 - 45)) * 100));
-        const s_door = Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100));
-        fScore = 0.25 * s_width_h + 0.25 * s_width_v + 0.25 * s_door + 0.25 * s_step_slope;
+        const s_width_h = x_h !== null ? Math.min(100, Math.max(0, ((x_h - 160/3) / (160 - 160/3)) * 100)) : null;
+        const s_width_v = x_v !== null ? Math.min(100, Math.max(0, ((x_v - 45) / (135 - 45)) * 100)) : null;
+        const s_door = x1 !== null ? Math.min(100, Math.max(0, ((x1 - 30) / (90 - 30)) * 100)) : null;
+        addScore(s_width_h); addScore(s_width_v); addScore(s_door); addScore(s_step_slope);
       }
       else if (mappedCategory === 'S5_주차장') {
-        const s_width_h = Math.min(100, Math.max(0, ((x_h - 110) / (330 - 110)) * 100));
-        const s_width_v = Math.min(100, Math.max(0, ((x_v - 500/3) / (500 - 500/3)) * 100));
-        fScore = 0.5 * s_width_h + 0.5 * s_width_v;
+        const s_width_h = x_h !== null ? Math.min(100, Math.max(0, ((x_h - 110) / (330 - 110)) * 100)) : null;
+        const s_width_v = x_v !== null ? Math.min(100, Math.max(0, ((x_v - 500/3) / (500 - 500/3)) * 100)) : null;
+        addScore(s_width_h); addScore(s_width_v);
       }
 
+      let fScore = 0;
+      if (scoresToAverage.length > 0) {
+        fScore = scoresToAverage.reduce((a, b) => a + b, 0) / scoresToAverage.length;
+      }
       if (isNaN(fScore)) fScore = 0;
 
       return {
@@ -137,30 +162,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid GPS data found in file.' }, { status: 400 });
     }
 
-    // Calculate Global Category Means (for subzones later, or main zone if missing)
-    const globalCatMeans: Record<string, number> = {};
-    ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat) => {
-      const allInCat = validFacilities.filter(f => f.category === cat);
-      globalCatMeans[cat] = allInCat.length > 0 
-        ? allInCat.reduce((sum, f) => sum + f.score, 0) / allInCat.length 
-        : 50.0; // 데이터 전무할 경우 중간값 50.0 가정
-    });
-
-    const catAvgs: Record<string, number> = { S1: 0, S2: 0, S3: 0, S4: 0, S5: 0 };
-    ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'].forEach((cat, index) => {
-      const facilitiesInCat = validFacilities.filter(f => f.category === cat);
-      catAvgs[`S${index + 1}`] = facilitiesInCat.length > 0
-        ? facilitiesInCat.reduce((sum, f) => sum + f.score, 0) / facilitiesInCat.length
-        : globalCatMeans[cat]; // 누락 시 해당 카테고리의 전체 평균(또는 50.0) 대입
-    });
-
-    const finalIndexRaw = (
-      catAvgs.S1 * catAvgs.S2 +
-      catAvgs.S2 * catAvgs.S3 +
-      catAvgs.S3 * catAvgs.S4 +
-      catAvgs.S4 * catAvgs.S5 +
-      catAvgs.S5 * catAvgs.S1
-    ) / 500;
+    // Dynamic Area Index Calculation based on PDF
+    const categories = ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'];
+    const validCats = categories.filter(cat => validFacilities.some(f => f.category === cat));
+    
+    let radarNodes: {score: number}[] = [];
+    
+    if (validCats.length > 2) {
+      radarNodes = validCats.map(cat => {
+        const facs = validFacilities.filter(f => f.category === cat);
+        return { score: facs.reduce((sum, f) => sum + f.score, 0) / facs.length };
+      });
+    } else {
+      // Add 편의시설 for 2 or fewer categories
+      radarNodes = validCats.map(cat => {
+        const facs = validFacilities.filter(f => f.category === cat);
+        return { score: facs.reduce((sum, f) => sum + f.score, 0) / facs.length };
+      });
+      const convFacs = validFacilities.filter(f => ['S3_화장실', 'S4_엘리베이터', 'S5_주차장'].includes(f.category));
+      const convScore = convFacs.length > 0 ? convFacs.reduce((sum, f) => sum + f.score, 0) / convFacs.length : 0;
+      radarNodes.push({ score: convScore });
+    }
+    
+    let finalIndexRaw = 0;
+    const n = radarNodes.length;
+    if (n >= 3) {
+      let sumProducts = 0;
+      for (let i = 0; i < n; i++) {
+        sumProducts += radarNodes[i].score * radarNodes[(i + 1) % n].score;
+      }
+      finalIndexRaw = sumProducts / (n * 100);
+    } else if (n === 2) {
+      finalIndexRaw = (radarNodes[0].score + radarNodes[1].score) / 2;
+    } else if (n === 1) {
+      finalIndexRaw = radarNodes[0].score;
+    }
     
     const avgScore = Math.round(finalIndexRaw);
 

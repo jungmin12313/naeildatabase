@@ -19,39 +19,48 @@ export function getZoneRadarData(facilities: any[], rawCategoryScores: any[]) {
     });
   });
 
-  // Calculate real averages for categories that have data
-  let globalTotal = 0;
-  let globalCount = 0;
-  const realScores: Record<string, number | null> = {};
-
+  const investigatedCategories: any[] = [];
+  
   categories.forEach(cat => {
     if (avgs[cat].count > 0) {
       const avg = avgs[cat].total / avgs[cat].count;
-      realScores[cat] = avg;
-      globalTotal += avg;
-      globalCount++;
-    } else {
-      realScores[cat] = null;
+      investigatedCategories.push({
+        id: cat,
+        subject: cat.split('_')[1],
+        A: Math.round(avg),
+        visualA: Math.round(avg) < 5 ? 5 : Math.round(avg),
+        fullMark: 100,
+        isImputed: false
+      });
     }
   });
 
-  // Fallback average for categories with NO data at all
-  // ONLY impute if we are dealing with a zone (multiple facilities). For a single facility, unmeasured is 0.
-  const fallbackAvg = (facilities.length > 1 && globalCount > 0) ? (globalTotal / globalCount) : 0;
-
-  const radar = categories.map(cat => {
-    const realScore = realScores[cat] !== null ? Math.round(realScores[cat] as number) : Math.round(fallbackAvg);
-    return {
-      id: cat,
-      subject: cat.split('_')[1],
-      A: realScore,
-      visualA: realScore < 5 ? 5 : realScore, // minimum for rendering
+  if (investigatedCategories.length <= 2) {
+    let convenienceTotal = 0;
+    let convenienceCount = 0;
+    
+    rawCategoryScores.forEach(s => {
+      if (['S3_화장실', 'S4_엘리베이터', 'S5_주차장'].includes(s.category)) {
+        if (s.score !== null && s.score !== undefined) {
+          convenienceTotal += s.score;
+          convenienceCount++;
+        }
+      }
+    });
+    
+    const convenienceAvg = convenienceCount > 0 ? (convenienceTotal / convenienceCount) : 0;
+    
+    investigatedCategories.push({
+      id: '편의시설',
+      subject: '편의시설',
+      A: Math.round(convenienceAvg),
+      visualA: Math.round(convenienceAvg) < 5 ? 5 : Math.round(convenienceAvg),
       fullMark: 100,
-      isImputed: realScores[cat] === null
-    };
-  });
+      isImputed: true
+    });
+  }
 
-  return radar;
+  return investigatedCategories;
 }
 
 export function getNormalizedCategoryScores(facilities: any[], rawCategoryScores: any[]) {

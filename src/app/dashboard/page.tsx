@@ -1,25 +1,17 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import mockData from '@/data/mock.json';
 import { Download, AlertTriangle, Building2, MapPin, TrendingUp, RefreshCw, Printer } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as xlsx from 'xlsx';
 import { COVERAGE_THRESHOLD } from '@/config/constants';
 import RadarChartComp from '@/components/RadarChartComp';
 import { getNormalizedCategoryScores, getZoneRadarData } from '@/utils/scoring';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 export default function Dashboard() {
   const { role, assignedZoneId, isAuthLoaded } = useAuth();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-
-
-  // Filter facilities based on role
+  const { mockData, dataLoaded } = useDashboardData();  // Filter facilities based on role
   const facilities = role === 'official' && assignedZoneId
     ? mockData.facilities.filter(f => f.zone_id === assignedZoneId)
     : mockData.facilities;
@@ -144,7 +136,7 @@ export default function Dashboard() {
     xlsx.writeFile(workbook, `공공시설물_접근성_진단데이터_${zoneName}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  if (!mounted || !isAuthLoaded) {
+  if (!dataLoaded || !isAuthLoaded) {
     return (
       <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center text-zinc-500">
         <p className="mb-4 text-lg">권한 확인 중...</p>

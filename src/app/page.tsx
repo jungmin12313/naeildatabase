@@ -8,13 +8,12 @@ import FacilityDetail from '@/components/FacilityDetail';
 import { X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { isPointInPolygon } from '@/utils/geo';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 export type MockData = typeof mockDataRaw;
 
 export default function Home() {
-  const [zonesData, setZonesData] = useState<any[]>([]);
-  const [facilitiesData, setFacilitiesData] = useState<any[]>([]);
-  const [categoryScoresData, setCategoryScoresData] = useState<any[]>([]);
+  const { mockData: fetchedMockData, dataLoaded, setZonesData } = useDashboardData();
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [selectedSubZoneId, setSelectedSubZoneId] = useState<string | null>(null);
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
@@ -24,91 +23,21 @@ export default function Home() {
   const [reselectingSubZoneId, setReselectingSubZoneId] = useState<string | null>(null);
   
   const { role, assignedZoneId } = useAuth();
-  const [mounted, setMounted] = useState(false);
-
+  
+  // Sync zonesData to localStorage whenever it changes
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const { supabase } = await import('@/utils/supabase');
-        
-        // Fetch Zones, SubZones, Facilities, and CategoryScores
-        const [
-          { data: dbZones, error: zErr },
-          { data: dbSubZones, error: szErr },
-          { data: dbFacilities, error: fErr },
-          { data: dbCategoryScores, error: csErr }
-        ] = await Promise.all([
-          supabase.from('zones').select('*'),
-          supabase.from('sub_zones').select('*'),
-          supabase.from('facilities').select('*'),
-          supabase.from('category_scores').select('*')
-        ]);
-        
-        if (dbZones && dbZones.length > 0 && !zErr && !szErr && !fErr && !csErr) {
-          // Format data to match our mock data structure for compatibility
-          const formattedZones = dbZones.map((z: any) => ({
-            ...z,
-            subZones: dbSubZones?.filter((sz: any) => sz.zone_id === z.id) || []
-          }));
-          
-          setZonesData(formattedZones);
-          if (dbCategoryScores) setCategoryScoresData(dbCategoryScores);
-          if (dbFacilities) {
-            const formattedFacilities = dbFacilities.map((f: any) => {
-              const fScore = dbCategoryScores?.find((cs: any) => cs.facility_id === f.id)?.score;
-              return { ...f, score: fScore !== undefined ? fScore : null };
-            });
-            setFacilitiesData(formattedFacilities);
-          }
-          setMounted(true);
-          return; // Exit early since we used Supabase
-        }
-        
-        // If we reach here, Supabase is empty or failed
-        // Fallback to localStorage if available (useful for local mock usage)
-        const localZones = localStorage.getItem('naeil_zonesData');
-        if (localZones) {
-          try {
-            setZonesData(JSON.parse(localZones));
-          } catch(e) {
-            setZonesData([]);
-          }
-        } else {
-          setZonesData([]);
-        }
-        setFacilitiesData([]);
-        setCategoryScoresData([]);
-        setMounted(true);
-      } catch (err) {
-        const localZones = localStorage.getItem('naeil_zonesData');
-        if (localZones) {
-          try { setZonesData(JSON.parse(localZones)); } catch(e) { setZonesData([]); }
-        } else {
-          setZonesData([]);
-        }
-        setFacilitiesData([]);
-        setCategoryScoresData([]);
-        setMounted(true);
-      }
+    if (dataLoaded && fetchedMockData.zones) {
+      localStorage.setItem('naeil_zonesData', JSON.stringify(fetchedMockData.zones));
     }
-    
-    fetchData();
-  }, []);
+  }, [fetchedMockData.zones, dataLoaded]);
 
-  // Sync zonesData to localStorage whenever it changes (only for mock mode, but safe to do always)
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem('naeil_zonesData', JSON.stringify(zonesData));
-    }
-  }, [zonesData, mounted]);
-
-  if (!mounted) return null;
+  if (!dataLoaded) return null;
 
   // Apply Role-Based Data Filtering
+  // Apply Role-Based Data Filtering
   const mockData = {
-    ...mockDataRaw,
-    zones: zonesData,
-    facilities: facilitiesData.filter(f => {
+    ...fetchedMockData,
+    facilities: fetchedMockData.facilities.filter(f => {
       const fStatus = f.status || '공개';
       // Admin sees everything
       if (role === 'admin') return true;
@@ -119,8 +48,7 @@ export default function Home() {
       }
       // Viewer sees only public
       return fStatus === '공개';
-    }),
-    categoryScores: categoryScoresData
+    })
   };
 
   const selectedZone = mockData.zones.find(z => z.id === selectedZoneId) || null;

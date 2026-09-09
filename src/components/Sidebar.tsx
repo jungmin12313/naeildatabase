@@ -81,8 +81,9 @@ export default function Sidebar({
   }, [displayFacilities, data.categoryScores]);
 
   const radarData = useMemo(() => {
-    return getZoneRadarData(displayFacilities, data.categoryScores);
-  }, [displayFacilities]);
+    const confirmedF = displayFacilities.filter(f => confirmedFacilityIds.includes(f.id));
+    return getZoneRadarData(confirmedF, data.categoryScores);
+  }, [displayFacilities, data.categoryScores, confirmedFacilityIds]);
 
   const { zoneScores, avgScores } = useMemo(() => {
     const scores = normalizedScores.filter(cs => confirmedFacilityIds.includes(cs.facility_id));

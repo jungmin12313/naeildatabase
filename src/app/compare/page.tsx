@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import mockDataRaw from '@/data/mock.json';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import { COVERAGE_THRESHOLD } from '@/config/constants';
 import * as xlsx from 'xlsx';
 import { Printer, Download, MapPin, AlertTriangle, Building2, Layers, CheckSquare, Square } from 'lucide-react';
@@ -14,21 +14,8 @@ import { getNormalizedCategoryScores, getZoneRadarData } from '@/utils/scoring';
 
 export default function CompareDashboard() {
   const { role, assignedZoneId, isAuthLoaded } = useAuth();
-  const [mounted, setMounted] = useState(false);
+  const { mockData, dataLoaded } = useDashboardData();
   const [selectedZoneIds, setSelectedZoneIds] = useState<string[]>([]);
-  const [zonesData, setZonesData] = useState<any[]>([]);
-
-  useEffect(() => {
-    const localZones = localStorage.getItem('naeil_zonesData');
-    if (localZones) {
-      try { setZonesData(JSON.parse(localZones)); } catch(e) { setZonesData(mockDataRaw.zones); }
-    } else {
-      setZonesData(mockDataRaw.zones);
-    }
-    setMounted(true);
-  }, []);
-
-  const mockData = { ...mockDataRaw, zones: zonesData.length > 0 ? zonesData : mockDataRaw.zones };
 
   const handleZoneToggle = (zoneId: string) => {
     setSelectedZoneIds(prev => {
@@ -184,7 +171,7 @@ export default function CompareDashboard() {
 
   const colors = ['#2563eb', '#dc2626', '#16a34a', '#d97706'];
 
-  if (!mounted || !isAuthLoaded) {
+  if (!dataLoaded || !isAuthLoaded) {
     return (
       <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center text-zinc-500">
         <p className="mb-4 text-lg">권한 확인 중...</p>
