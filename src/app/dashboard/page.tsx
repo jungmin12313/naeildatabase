@@ -268,7 +268,6 @@ export default function Dashboard() {
             <div>
               <p className="text-[11px] md:text-xs font-semibold text-zinc-500">종합 점수 <span className="text-[10px] bg-zinc-100 text-zinc-500 px-1 py-0.5 rounded">(자체 공식)</span></p>
               <p className="text-2xl font-bold text-zinc-900">{overallAvg.toFixed(1)}점</p>
-              <p className="text-[10px] text-zinc-400">DB: s1={s1.toFixed(1)}, s2={s2.toFixed(1)}, s3={s3.toFixed(1)}, s4={s4.toFixed(1)}, s5={s5.toFixed(1)}</p>
             </div>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex items-center">
