@@ -62,13 +62,16 @@ export function useDashboardData() {
   }, []);
 
   const mockData = useMemo(() => {
+    if (!dataLoaded) {
+      return mockDataRaw; // Show fallback while loading
+    }
     return {
       ...mockDataRaw,
-      zones: zonesData.length > 0 ? zonesData : mockDataRaw.zones,
-      facilities: facilitiesData.length > 0 ? facilitiesData : mockDataRaw.facilities,
-      categoryScores: categoryScoresData.length > 0 ? categoryScoresData : mockDataRaw.categoryScores
+      zones: zonesData,
+      facilities: facilitiesData,
+      categoryScores: categoryScoresData
     };
-  }, [zonesData, facilitiesData, categoryScoresData]);
+  }, [zonesData, facilitiesData, categoryScoresData, dataLoaded]);
 
   return { mockData, dataLoaded, setZonesData };
 }
