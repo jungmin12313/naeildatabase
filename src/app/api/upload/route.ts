@@ -162,43 +162,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid GPS data found in file.' }, { status: 400 });
     }
 
-    // Dynamic Area Index Calculation based on PDF
-    const categories = ['S1_보행로', 'S2_출입구', 'S3_화장실', 'S4_엘리베이터', 'S5_주차장'];
-    const validCats = categories.filter(cat => validFacilities.some(f => f.category === cat));
-    
-    let radarNodes: {score: number}[] = [];
-    
-    if (validCats.length > 2) {
-      radarNodes = validCats.map(cat => {
-        const facs = validFacilities.filter(f => f.category === cat);
-        return { score: facs.reduce((sum, f) => sum + f.score, 0) / facs.length };
-      });
-    } else {
-      // Add 편의시설 for 2 or fewer categories
-      radarNodes = validCats.map(cat => {
-        const facs = validFacilities.filter(f => f.category === cat);
-        return { score: facs.reduce((sum, f) => sum + f.score, 0) / facs.length };
-      });
-      const convFacs = validFacilities.filter(f => ['S3_화장실', 'S4_엘리베이터', 'S5_주차장'].includes(f.category));
-      const convScore = convFacs.length > 0 ? convFacs.reduce((sum, f) => sum + f.score, 0) / convFacs.length : 0;
-      radarNodes.push({ score: convScore });
-    }
-    
-    let finalIndexRaw = 0;
-    const n = radarNodes.length;
-    if (n >= 3) {
-      let sumProducts = 0;
-      for (let i = 0; i < n; i++) {
-        sumProducts += radarNodes[i].score * radarNodes[(i + 1) % n].score;
-      }
-      finalIndexRaw = sumProducts / (n * 100);
-    } else if (n === 2) {
-      finalIndexRaw = (radarNodes[0].score + radarNodes[1].score) / 2;
-    } else if (n === 1) {
-      finalIndexRaw = radarNodes[0].score;
-    }
-    
-    const avgScore = Math.round(finalIndexRaw);
+    const getCatAvg = (facs: any[], cat: string, defaultVal: number) => {
+      const filtered = facs.filter(f => f.category === cat);
+      if (filtered.length === 0) return defaultVal;
+      return filtered.reduce((sum, f) => sum + f.score, 0) / filtered.length;
+    };
+
+    // Dynamic Area Index Calculation exactly as done in the frontend
+    const s1 = getCatAvg(validFacilities, 'S1_보행로', 50);
+    const s2 = getCatAvg(validFacilities, 'S2_출입구', 50);
+    const s3 = getCatAvg(validFacilities, 'S3_화장실', 50);
+    const s4 = getCatAvg(validFacilities, 'S4_엘리베이터', 50);
+    const s5 = getCatAvg(validFacilities, 'S5_주차장', 50);
+
+    const finalIndexRaw = (s1 * s2 + s2 * s3 + s3 * s4 + s4 * s5 + s5 * s1) / 500;
+    const avgScore = finalIndexRaw; // Don't round yet to maintain precision, or keep original decimal if needed. Frontend uses .toFixed(1).
 
     // Main Zone
     const mainZoneName = allRows[0]['프로젝트명'] || '업로드된 무장애지도';

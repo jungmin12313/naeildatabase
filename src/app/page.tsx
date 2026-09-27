@@ -137,11 +137,16 @@ export default function Home() {
         />
         {/* Top Header Overlay */}
         <div className="absolute top-4 left-4 z-10 pointer-events-none">
-          <div className="bg-white/90 backdrop-blur-md px-6 py-4 rounded-2xl shadow-sm border border-zinc-200 pointer-events-auto">
-            <h1 className="text-xl font-bold tracking-tight text-zinc-900">모두의 내일 진단</h1>
-            <p className="text-sm text-zinc-500 mt-1">접근성 진단 데이터 지도</p>
+          <div className="bg-white/90 backdrop-blur-md px-6 py-4 rounded-2xl shadow-sm border border-zinc-200 pointer-events-auto flex items-center gap-4">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-zinc-900">모두의 내일 진단</h1>
+              <p className="text-sm text-zinc-500 mt-1">접근성 진단 데이터 지도</p>
+            </div>
           </div>
         </div>
+        
+        {/* User Auth & Nav Overlay (Hidden for business proposal presentation) */}
+        {/* <div className="absolute top-4 right-4 z-10"> ... </div> */}
       </div>
       
       <div className="absolute md:relative bottom-0 right-0 w-full md:w-[480px] h-[50vh] md:h-full bg-white border-t md:border-t-0 md:border-l border-zinc-200 shadow-2xl md:shadow-xl z-30 flex flex-col print:w-full print:h-auto print:border-none print:shadow-none print:overflow-visible transition-transform">

@@ -564,14 +564,12 @@ export default function Sidebar({
             <span className="text-xs font-semibold tracking-wider text-blue-600 uppercase mb-1 block">Zone Details</span>
             <h2 className="text-2xl font-bold text-zinc-900">{selectedSubZone ? selectedSubZone.name : selectedZone.name}</h2>
           </div>
-          <div className="text-right">
+            <div className="text-right">
             <div className="text-xs text-zinc-500 mb-1">{selectedSubZone ? '구역 넓이지수' : '최종 넓이지수'}</div>
             <div className="text-2xl font-bold" style={{ color: getColorForScore(calculatedFinalIndex) }}>
               {calculatedFinalIndex !== null ? calculatedFinalIndex.toFixed(1) : '-'}
             </div>
-            <div className="text-[10px] text-zinc-400 mt-0.5 whitespace-nowrap">정밀진단 시설 기준</div>
-            <div className="text-[10px] text-zinc-400">HM: s1={(avgScores['S1_보행로']?.count > 0 ? avgScores['S1_보행로'].total / avgScores['S1_보행로'].count : 50).toFixed(1)}, s2={(avgScores['S2_출입구']?.count > 0 ? avgScores['S2_출입구'].total / avgScores['S2_출입구'].count : 50).toFixed(1)}</div>
-            <div className="text-[10px] text-blue-500 font-bold mt-0.5 whitespace-nowrap">커버리지: {coveragePercent}% ({confirmedFacilityIds.length}/{displayFacilities.length})</div>
+            {/* 정밀진단 시설 기준, HM, 커버리지 정보 숨김 처리 (사업제안용) */}
           </div>
         </div>
       </div>
