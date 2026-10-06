@@ -145,8 +145,30 @@ export default function Home() {
           </div>
         </div>
         
-        {/* User Auth & Nav Overlay (Hidden for business proposal presentation) */}
-        {/* <div className="absolute top-4 right-4 z-10"> ... </div> */}
+        {/* User Auth & Nav Overlay (Hidden for business proposal presentation, unless stealth admin) */}
+        {role === 'admin' && (
+          <div className="absolute top-4 right-4 z-10">
+            <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-sm border border-zinc-200 flex flex-col md:flex-row items-center gap-4">
+              <div className="flex gap-2 text-sm font-bold">
+                <a href="/dashboard" className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">대시보드</a>
+                <a href="/admin" className="text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg transition-colors">운영자 홈</a>
+              </div>
+              <div className="w-px h-6 bg-zinc-300 hidden md:block"></div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-zinc-500 bg-zinc-100 px-2 py-1 rounded">최고 관리자</span>
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem('stealth_admin');
+                    window.location.reload();
+                  }}
+                  className="text-sm text-zinc-600 hover:text-red-600 font-bold px-2 py-1 rounded-lg transition-colors"
+                >
+                  종료
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="absolute md:relative bottom-0 right-0 w-full md:w-[480px] h-[50vh] md:h-full bg-white border-t md:border-t-0 md:border-l border-zinc-200 shadow-2xl md:shadow-xl z-30 flex flex-col print:w-full print:h-auto print:border-none print:shadow-none print:overflow-visible transition-transform">

@@ -37,8 +37,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl + Shift + Y
+      if (e.ctrlKey && e.shiftKey && (e.key === 'Y' || e.key === 'y')) {
+        e.preventDefault();
+        const isCurrentlyAdmin = localStorage.getItem('stealth_admin') === 'true';
+        if (isCurrentlyAdmin) {
+          localStorage.removeItem('stealth_admin');
+          setRole('viewer');
+          alert('Viewer 모드로 전환되었습니다.');
+        } else {
+          localStorage.setItem('stealth_admin', 'true');
+          setRole('admin');
+          alert('Admin 모드로 전환되었습니다.');
+        }
+        window.location.reload();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const updateRoleFromSession = (session: any) => {
-    // For business proposal presentation, force ALL users to be 'viewer'
+    // Check stealth admin
+    if (typeof window !== 'undefined' && localStorage.getItem('stealth_admin') === 'true') {
+      setRole('admin');
+      setAssignedZoneId(null);
+      return;
+    }
+    
+    // For business proposal presentation, force ALL users to be 'viewer' by default
     setRole('viewer');
     setAssignedZoneId(null);
   };
