@@ -67,7 +67,7 @@ export default function Sidebar({
   const [reselectingSubZoneId, setReselectingSubZoneId] = useState<string | null>(null);
 
   // @ts-ignore
-  const selectedSubZone = selectedZone?.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
+  const selectedSubZone: any = selectedZone?.subZones?.find((s: any) => s.id === selectedSubZoneId) || null;
 
   const normalizedScores = useMemo(() => {
     return getNormalizedCategoryScores(displayFacilities, data.categoryScores);
@@ -282,7 +282,7 @@ export default function Sidebar({
                   const newZones = data.zones.map(z => {
                     if (z.id === drawingTargetZoneId) {
                       // @ts-ignore
-                      let updatedSubZones = z.subZones ? [...z.subZones] : [];
+                      let updatedSubZones: any[] = z.subZones ? [...(z.subZones as any[])] : [];
                       
                       if (reselectingSubZoneId) {
                         updatedSubZones = updatedSubZones.map((s: any) => {
