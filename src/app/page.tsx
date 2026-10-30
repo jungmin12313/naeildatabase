@@ -22,7 +22,8 @@ export default function Home() {
   const [drawnPolygon, setDrawnPolygon] = useState<{lat: number, lng: number}[]>([]);
   const [reselectingSubZoneId, setReselectingSubZoneId] = useState<string | null>(null);
   
-  const { role, assignedZoneId } = useAuth();
+  const { role, assignedZoneId, toggleAdminMode } = useAuth();
+  const clickCountRef = useState<{ count: number, lastTime: number }>({ count: 0, lastTime: 0 })[0];
   
   // Sync zonesData to localStorage whenever it changes
   useEffect(() => {
@@ -137,12 +138,48 @@ export default function Home() {
         />
         {/* Top Header Overlay */}
         <div className="absolute top-4 left-4 z-10 pointer-events-none">
-          <div className="bg-white/90 backdrop-blur-md px-6 py-4 rounded-2xl shadow-sm border border-zinc-200 pointer-events-auto flex items-center gap-4">
+          <div 
+            onClick={() => {
+              const now = Date.now();
+              if (now - clickCountRef.lastTime < 500) {
+                clickCountRef.count += 1;
+                if (clickCountRef.count >= 3) {
+                  clickCountRef.count = 0;
+                  toggleAdminMode();
+                }
+              } else {
+                clickCountRef.count = 1;
+              }
+              clickCountRef.lastTime = now;
+            }}
+            title="3번 연속 클릭 시 관리자 모드 On/Off"
+            className="bg-white/90 backdrop-blur-md px-6 py-4 rounded-2xl shadow-sm border border-zinc-200 pointer-events-auto flex items-center gap-4 cursor-pointer select-none hover:bg-white transition-colors"
+          >
             <div>
               <h1 className="text-xl font-bold tracking-tight text-zinc-900">모두의 내일 진단</h1>
               <p className="text-sm text-zinc-500 mt-1">접근성 진단 데이터 지도</p>
             </div>
+            {role === 'admin' && (
+              <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2.5 py-1 rounded-full border border-purple-200 animate-pulse">
+                운영자 모드
+              </span>
+            )}
           </div>
+        </div>
+
+        {/* Secret Admin Button (Bottom-left corner) */}
+        <div className="absolute bottom-4 left-4 z-20">
+          <button
+            onClick={toggleAdminMode}
+            title="관리자 모드 On/Off (클릭 또는 Ctrl+Shift+Y)"
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 ${
+              role === 'admin' 
+                ? 'bg-purple-600 text-white hover:bg-purple-700 ring-2 ring-purple-300' 
+                : 'bg-white/80 backdrop-blur-sm text-zinc-400 hover:text-zinc-800 hover:bg-white border border-zinc-200'
+            }`}
+          >
+            <span>{role === 'admin' ? '🔓 관리자 모드 ON (종료)' : '🔒 관리자 전환'}</span>
+          </button>
         </div>
         
         {/* User Auth & Nav Overlay (Hidden for business proposal presentation, unless stealth admin) */}
@@ -157,10 +194,7 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-zinc-500 bg-zinc-100 px-2 py-1 rounded">최고 관리자</span>
                 <button 
-                  onClick={() => {
-                    localStorage.removeItem('stealth_admin');
-                    window.location.reload();
-                  }}
+                  onClick={toggleAdminMode}
                   className="text-sm text-zinc-600 hover:text-red-600 font-bold px-2 py-1 rounded-lg transition-colors"
                 >
                   종료
