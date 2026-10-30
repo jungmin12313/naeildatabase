@@ -2,14 +2,27 @@ import { useState, useEffect, useMemo } from 'react';
 import mockDataRaw from '@/data/mock.json';
 
 export function useDashboardData() {
-  const [zonesData, setZonesData] = useState<any[]>([]);
-  const [facilitiesData, setFacilitiesData] = useState<any[]>([]);
-  const [categoryScoresData, setCategoryScoresData] = useState<any[]>([]);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  // Initialize immediately with full mock data so there is ZERO black screen / delay
+  const [zonesData, setZonesData] = useState<any[]>(mockDataRaw.zones || []);
+  const [facilitiesData, setFacilitiesData] = useState<any[]>(mockDataRaw.facilities || []);
+  const [categoryScoresData, setCategoryScoresData] = useState<any[]>(mockDataRaw.categoryScores || []);
+  const [dataLoaded, setDataLoaded] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
+        // Check local storage override first
+        const localZones = localStorage.getItem('naeil_zonesData');
+        if (localZones) {
+          try {
+            const parsed = JSON.parse(localZones);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setZonesData(parsed);
+            }
+          } catch(e) { }
+        }
+
+        // Try Supabase if available
         const { supabase } = await import('@/utils/supabase');
         
         const [
@@ -31,29 +44,18 @@ export function useDashboardData() {
           }));
           
           setZonesData(formattedZones);
-          if (dbCategoryScores) setCategoryScoresData(dbCategoryScores);
-          if (dbFacilities) {
+          if (dbCategoryScores && dbCategoryScores.length > 0) setCategoryScoresData(dbCategoryScores);
+          if (dbFacilities && dbFacilities.length > 0) {
             const formattedFacilities = dbFacilities.map((f: any) => {
               const fScore = dbCategoryScores?.find((cs: any) => cs.facility_id === f.id)?.score;
               return { ...f, score: fScore !== undefined ? fScore : null };
             });
             setFacilitiesData(formattedFacilities);
           }
-          setDataLoaded(true);
-          return;
         }
-        
-        // Fallback to local storage
-        const localZones = localStorage.getItem('naeil_zonesData');
-        if (localZones) {
-          try { setZonesData(JSON.parse(localZones)); } catch(e) { }
-        }
-        setDataLoaded(true);
       } catch (err) {
-        const localZones = localStorage.getItem('naeil_zonesData');
-        if (localZones) {
-          try { setZonesData(JSON.parse(localZones)); } catch(e) { }
-        }
+        // Fallback: full mockDataRaw is already loaded as default state
+      } finally {
         setDataLoaded(true);
       }
     }
@@ -62,16 +64,13 @@ export function useDashboardData() {
   }, []);
 
   const mockData = useMemo(() => {
-    if (!dataLoaded) {
-      return mockDataRaw; // Show fallback while loading
-    }
     return {
       ...mockDataRaw,
-      zones: zonesData,
-      facilities: facilitiesData,
-      categoryScores: categoryScoresData
+      zones: zonesData.length > 0 ? zonesData : mockDataRaw.zones,
+      facilities: facilitiesData.length > 0 ? facilitiesData : mockDataRaw.facilities,
+      categoryScores: categoryScoresData.length > 0 ? categoryScoresData : mockDataRaw.categoryScores
     };
-  }, [zonesData, facilitiesData, categoryScoresData, dataLoaded]);
+  }, [zonesData, facilitiesData, categoryScoresData]);
 
   return { mockData, dataLoaded, setZonesData };
 }

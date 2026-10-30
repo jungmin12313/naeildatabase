@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/utils/supabase';
 
 export type Role = 'viewer' | 'official' | 'admin';
 
@@ -20,20 +19,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
   useEffect(() => {
-    const loadSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      updateRoleFromSession(session);
+    // Immediately check stealth admin from localStorage on client mount
+    const isCurrentlyAdmin = localStorage.getItem('stealth_admin') === 'true';
+    if (isCurrentlyAdmin) {
+      setRole('admin');
+      setAssignedZoneId(null);
       setIsAuthLoaded(true);
+      return;
+    }
+
+    const loadSession = async () => {
+      try {
+        const { supabase } = await import('@/utils/supabase');
+        const { data } = await supabase.auth.getSession();
+        updateRoleFromSession(data?.session);
+      } catch (err) {
+        // Fallback for offline/no-supabase mode
+        updateRoleFromSession(null);
+      } finally {
+        setIsAuthLoaded(true);
+      }
     };
 
     loadSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      updateRoleFromSession(session);
-    });
+    let subscription: any = null;
+    import('@/utils/supabase').then(({ supabase }) => {
+      try {
+        const res = supabase.auth.onAuthStateChange((_event, session) => {
+          updateRoleFromSession(session);
+        });
+        subscription = res.data?.subscription;
+      } catch(e) {}
+    }).catch(() => {});
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) subscription.unsubscribe();
     };
   }, []);
 
@@ -46,11 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isCurrentlyAdmin) {
           localStorage.removeItem('stealth_admin');
           setRole('viewer');
-          alert('Viewer 모드로 전환되었습니다.');
+          alert('일반 사용자(Viewer) 모드로 전환되었습니다.');
         } else {
           localStorage.setItem('stealth_admin', 'true');
           setRole('admin');
-          alert('Admin 모드로 전환되었습니다.');
+          alert('관리자(Admin) 모드로 전환되었습니다.');
         }
         window.location.reload();
       }
@@ -60,20 +81,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateRoleFromSession = (session: any) => {
-    // Check stealth admin
     if (typeof window !== 'undefined' && localStorage.getItem('stealth_admin') === 'true') {
       setRole('admin');
       setAssignedZoneId(null);
       return;
     }
     
-    // For business proposal presentation, force ALL users to be 'viewer' by default
+    // For business proposal presentation, default to 'viewer'
     setRole('viewer');
     setAssignedZoneId(null);
   };
 
   const handleSetRole = (newRole: Role) => {
-    // Only for fallback / type compatibility, actual role is determined by Supabase session
     setRole(newRole);
   };
 
