@@ -16,8 +16,16 @@ export function useDashboardData() {
         if (localZones) {
           try {
             const parsed = JSON.parse(localZones);
-            if (Array.isArray(parsed) && parsed.length > 0) {
+            if (
+              Array.isArray(parsed) && 
+              parsed.length > 0 && 
+              parsed[0]?.id !== 'z_dummy_loading' &&
+              (parsed[0]?.id === mockDataRaw.zones[0]?.id || parsed[0]?.name?.includes('전대후문'))
+            ) {
               setZonesData(parsed);
+            } else {
+              localStorage.removeItem('naeil_zonesData');
+              setZonesData(mockDataRaw.zones);
             }
           } catch(e) { }
         }

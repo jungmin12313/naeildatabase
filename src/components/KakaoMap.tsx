@@ -257,36 +257,37 @@ export default function KakaoMap({
               );
             })}
 
-            {/* Facility Markers */}
-            {displayFacilities && displayFacilities.map(f => {
-              if (!f.location) return null;
-              const fColor = getColorForScore(f.score ?? null);
-              const isSelected = f.id === selectedFacilityId;
-              
-              return (
-                <CustomOverlayMap key={`marker-${f.id}`} position={f.location} clickable={true}>
-                  <div className="group relative cursor-pointer z-20">
-                    {isSelected && (
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-red-600 drop-shadow-lg text-2xl font-bold animate-bounce pointer-events-none z-30">
-                        ▼
-                      </div>
-                    )}
-                    <div 
-                      className={`w-4 h-4 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2 transition-transform ${isSelected ? 'scale-150 ring-2 ring-red-600 ring-offset-1' : 'group-hover:scale-125'}`} 
-                      style={{ backgroundColor: fColor }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onSelectFacility) onSelectFacility(f.id);
-                      }}
-                    />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block whitespace-nowrap bg-zinc-800 text-white text-xs px-2 py-1 rounded shadow-lg z-30">
-                      {f.name} ({f.score !== null && f.score !== undefined ? `${f.score.toFixed(1)}점` : '산출보류'})
-                    </div>
-                  </div>
-                </CustomOverlayMap>
-              );
-            })}
           </div>
+        );
+      })}
+
+      {/* Facility Markers (Always rendered for displayFacilities) */}
+      {displayFacilities && displayFacilities.map(f => {
+        if (!f.location) return null;
+        const fColor = getColorForScore(f.score ?? null);
+        const isSelected = f.id === selectedFacilityId;
+        
+        return (
+          <CustomOverlayMap key={`marker-${f.id}`} position={f.location} clickable={true}>
+            <div className="group relative cursor-pointer z-20">
+              {isSelected && (
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-red-600 drop-shadow-lg text-2xl font-bold animate-bounce pointer-events-none z-30">
+                  ▼
+                </div>
+              )}
+              <div 
+                className={`w-4 h-4 rounded-full border-2 border-white shadow-md transform -translate-x-1/2 -translate-y-1/2 transition-transform ${isSelected ? 'scale-150 ring-2 ring-red-600 ring-offset-1' : 'group-hover:scale-125'}`} 
+                style={{ backgroundColor: fColor }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSelectFacility) onSelectFacility(f.id);
+                }}
+              />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block whitespace-nowrap bg-zinc-800 text-white text-xs px-2 py-1 rounded shadow-lg z-30">
+                {f.name} ({f.score !== null && f.score !== undefined ? `${f.score.toFixed(1)}점` : '산출보류'})
+              </div>
+            </div>
+          </CustomOverlayMap>
         );
       })}
     </Map>

@@ -388,7 +388,10 @@ export default function Sidebar({
               return (
                 <div key={z.id} className={`rounded-xl border overflow-hidden transition-shadow ${isExpanded ? 'border-zinc-300 shadow-md' : 'border-zinc-200 shadow-sm hover:shadow-md'}`}>
                   <button 
-                    onClick={() => setExpandedZoneId(isExpanded ? null : z.id)}
+                    onClick={() => {
+                      setExpandedZoneId(isExpanded ? null : z.id);
+                      onSelectZone(z.id, 'all');
+                    }}
                     className="w-full flex items-center justify-between p-4 bg-white text-left transition-colors hover:bg-zinc-50"
                   >
                     <span className="font-medium text-zinc-800">{z.name}</span>
