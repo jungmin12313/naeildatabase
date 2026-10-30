@@ -55,7 +55,7 @@ export default function Home() {
   const selectedZone = mockData.zones.find(z => z.id === selectedZoneId) || null;
   const zoneFacilities = selectedZone 
     ? mockData.facilities.filter(f => f.zone_id === selectedZone.id) 
-    : mockData.facilities;
+    : [];
 
   const selectedFacility = mockData.facilities.find(f => f.id === selectedFacilityId) || null;
 
